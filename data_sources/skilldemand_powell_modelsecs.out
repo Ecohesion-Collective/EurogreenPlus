@@ -1,0 +1,79 @@
+:COMSYS After 111096243 simulations
+:COMSYS Best payoff is 590.341
+:COMSYS User terminated multiple search session
+:OPTIMIZER=Powell
+:SENSITIVITY=Off
+:MULTIPLE_START=RRandom
+:RANDOM_NUMBER=Default
+:OUTPUT_LEVEL=On
+:TRACE=Off
+:MAX_ITERATIONS=100000000
+:RESTART_MAX=1000000
+:PASS_LIMIT=2
+:FRACTIONAL_TOLERANCE=0.0003
+:TOLERANCE_MULTIPLIER=21
+:ABSOLUTE_TOLERANCE=1
+:SCALE_ABSOLUTE=1
+:VECTOR_POINTS=25
+:MCLIMIT=10000000
+:MCJUMP=0.05
+:MCBURNIN=9900000
+:MCDELTA=0.0001
+:MCTEMP=1
+:MCNCHAINS=2
+:MCUPDATEPAIRS=2
+:MCSCHEDULE=0
+:MCOUTLIER=0.05
+:MCXOVER=0.2
+:MCCOOLING=1000
+:MCINITMETHOD=0
+:MCPAYOFFTYPE=0
+:MCGAMMA=1
+:MCRECORD=0
+:MCKNN=0
+:MCEPSILON=0.01
+:MCFTEMP=1
+-10 <= lab prod change impact[agri,hig] = -0.0149901  <= 10
+-10 <= lab prod change impact[agri,low] = -0.234433  <= 10
+-10 <= lab prod change impact[mining,hig] = 0.00609075  <= 10
+-10 <= lab prod change impact[mining,low] = 0.0216964  <= 10
+-10 <= lab prod change impact[manufacturing,hig] = 0.427064  <= 10
+-10 <= lab prod change impact[manufacturing,low] = -0.470341  <= 10
+-10 <= lab prod change impact[petroleum,hig] = 0.170891  <= 10
+-10 <= lab prod change impact[petroleum,low] = -0.200285  <= 10
+-10 <= lab prod change impact[vehicles,hig] = 0.133715  <= 10
+-10 <= lab prod change impact[vehicles,low] = -0.148884  <= 10
+-10 <= lab prod change impact[electricity ind,hig] = -0.689284  <= 10
+-10 <= lab prod change impact[electricity ind,low] = 0.136781  <= 10
+-10 <= lab prod change impact[gas ind,hig] = -0.689284  <= 10
+-10 <= lab prod change impact[gas ind,low] = 0.136781  <= 10
+-10 <= lab prod change impact[heat ind,hig] = -0.689284  <= 10
+-10 <= lab prod change impact[heat ind,low] = 0.136781  <= 10
+-10 <= lab prod change impact[water,hig] = -0.137452  <= 10
+-10 <= lab prod change impact[water,low] = -0.0656344  <= 10
+-10 <= lab prod change impact[construction,hig] = 0.0615676  <= 10
+-10 <= lab prod change impact[construction,low] = 0.197964  <= 10
+-10 <= lab prod change impact[trade,hig] = 0.273983  <= 10
+-10 <= lab prod change impact[trade,low] = -0.313514  <= 10
+-10 <= lab prod change impact[transport,hig] = -0.217794  <= 10
+-10 <= lab prod change impact[transport,low] = 0.0835259  <= 10
+-10 <= lab prod change impact[hospitality,hig] = -0.291147  <= 10
+-10 <= lab prod change impact[hospitality,low] = 0.790673  <= 10
+-10 <= lab prod change impact[ict,hig] = -1.13911  <= 10
+-10 <= lab prod change impact[ict,low] = 0.322905  <= 10
+-10 <= lab prod change impact[finance,hig] = 1.31059  <= 10
+-10 <= lab prod change impact[finance,low] = -0.24607  <= 10
+-10 <= lab prod change impact[realestate,hig] = 0.711006  <= 10
+-10 <= lab prod change impact[realestate,low] = -0.0582254  <= 10
+-10 <= lab prod change impact[profserv,hig] = -0.400161  <= 10
+-10 <= lab prod change impact[profserv,low] = -0.0762818  <= 10
+-10 <= lab prod change impact[public,hig] = 0.949671  <= 10
+-10 <= lab prod change impact[public,low] = -0.473556  <= 10
+-10 <= lab prod change impact[education,hig] = -0.74986  <= 10
+-10 <= lab prod change impact[education,low] = -0.133773  <= 10
+-10 <= lab prod change impact[health,hig] = -0.966742  <= 10
+-10 <= lab prod change impact[health,low] = 0.171508  <= 10
+-10 <= lab prod change impact[households,hig] = 0.0  <= 10
+-10 <= lab prod change impact[households,low] = 0.0  <= 10
+-0.025 <= trend s[hig] = 0.000693404  <= 0.025
+-0.025 <= trend s[low] = -0.00321787  <= 0.025

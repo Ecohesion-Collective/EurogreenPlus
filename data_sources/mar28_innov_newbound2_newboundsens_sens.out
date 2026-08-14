@@ -1,0 +1,93 @@
+:COMSYS After 1112 simulations
+:COMSYS Best payoff is 5223.26
+:COMSYS User terminated multiple search session
+:OPTIMIZER=Powell
+:STOCHASTIC
+:SENSITIVITY=Payoff Value=1.92
+:MULTIPLE_START=RRandom
+:RANDOM_NUMBER=Default
+:OUTPUT_LEVEL=On
+:TRACE=Off
+:MAX_ITERATIONS=1500
+:RESTART_MAX=100
+:PASS_LIMIT=2
+:FRACTIONAL_TOLERANCE=0.0003
+:TOLERANCE_MULTIPLIER=21
+:ABSOLUTE_TOLERANCE=1
+:SCALE_ABSOLUTE=1
+:VECTOR_POINTS=25
+:MCLIMIT=0
+:MCJUMP=0.05
+:MCBURNIN=0
+:MCDELTA=0.0001
+:MCTEMP=1
+:MCNCHAINS=2
+:MCUPDATEPAIRS=2
+:MCSCHEDULE=0
+:MCOUTLIER=0.05
+:MCXOVER=0.2
+:MCCOOLING=1000
+:MCINITMETHOD=0
+:MCPAYOFFTYPE=0
+:MCGAMMA=1
+:MCRECORD=0
+:MCKNN=0
+:MCEPSILON=0.01
+:MCFTEMP=1
+0.5 <= sens prob[agri] = 2.90377  <= 5
+0.5 <= sens prob[mining] = 0.5  <= 5
+0.5 <= sens prob[manufacturing] = 1.6309  <= 5
+0.5 <= sens prob[petroleum] = 0.5  <= 5
+0.5 <= sens prob[vehicles] = 1.05305  <= 5
+0.5 <= sens prob[gas ind] = 0.867393  <= 5
+0.5 <= sens prob[heat ind] = 3.23279  <= 5
+0.5 <= sens prob[water] = 0.72069  <= 5
+0.5 <= sens prob[construction] = 1.6996  <= 5
+0.5 <= sens prob[trade] = 0.796885  <= 5
+0.5 <= sens prob[transport] = 0.5  <= 5
+0.5 <= sens prob[hospitality] = 0.5  <= 5
+0.5 <= sens prob[ict] = 1.22837  <= 5
+0.5 <= sens prob[finance] = 5  <= 5
+0.5 <= sens prob[realestate] = 1.50408  <= 5
+0.5 <= sens prob[profserv] = 0.5  <= 5
+0.5 <= sens prob[public] = 1.84184  <= 5
+0.5 <= sens prob[education] = 0.5  <= 5
+0.5 <= sens prob[health] = 0.914453  <= 5
+0.05 <= initial prob input saving[agri] = 0.05  <= 0.05
+0.05 <= initial prob input saving[mining] = 0.75  <= 0.75
+0.05 <= initial prob input saving[manufacturing] = 0.148931  <= 0.75
+0.05 <= initial prob input saving[petroleum] = 0.05  <= 0.75
+0.05 <= initial prob input saving[vehicles] = 0.05  <= 0.75
+0.05 <= initial prob input saving[gas ind] = 0.05  <= 0.75
+0.05 <= initial prob input saving[heat ind] = 0.05  <= 0.75
+0.05 <= initial prob input saving[water] = 0.05  <= 0.05
+0.05 <= initial prob input saving[construction] = 0.366017  <= 0.75
+0.05 <= initial prob input saving[trade] = 0.75  <= 0.75
+0.05 <= initial prob input saving[transport] = 0.35769  <= 0.75
+0.05 <= initial prob input saving[hospitality] = 0.05  <= 0.05
+0.05 <= initial prob input saving[ict] = 0.05  <= 0.05
+0.05 <= initial prob input saving[finance] = 0.300028  <= 0.75
+0.05 <= initial prob input saving[realestate] = 0.48808  <= 0.75
+0.05 <= initial prob input saving[profserv] = 0.75  <= 0.75
+0.05 <= initial prob input saving[public] = 0.05  <= 0.05
+0.05 <= initial prob input saving[education] = 0.177017  <= 0.75
+0.05 <= initial prob input saving[health] = 0.05  <= 0.05
+0.05 <= initial prob labour saving[agri] = 0.306364  <= 0.75
+0.05 <= initial prob labour saving[mining] = 0.75  <= 0.75
+0.05 <= initial prob labour saving[manufacturing] = 0.75  <= 0.75
+0.05 <= initial prob labour saving[petroleum] = 0.3  <= 0.75
+0.05 <= initial prob labour saving[vehicles] = 0.75  <= 0.75
+0.05 <= initial prob labour saving[gas ind] = 0.455926  <= 0.75
+0.05 <= initial prob labour saving[heat ind] = 0.75  <= 0.75
+0.05 <= initial prob labour saving[water] = 0.05  <= 0.05
+0.05 <= initial prob labour saving[construction] = 0.05  <= 0.05
+0.05 <= initial prob labour saving[trade] = 0.75  <= 0.75
+0.05 <= initial prob labour saving[transport] = 0.05  <= 0.05
+0.05 <= initial prob labour saving[hospitality] = 0.05  <= 0.05
+0.05 <= initial prob labour saving[ict] = 0.05  <= 0.05
+0.05 <= initial prob labour saving[finance] = 0.672244  <= 0.75
+0.05 <= initial prob labour saving[realestate] = 0.75  <= 0.75
+0.05 <= initial prob labour saving[profserv] = 0.05  <= 0.05
+0.05 <= initial prob labour saving[public] = 0.75  <= 0.75
+0.05 <= initial prob labour saving[education] = 0.05  <= 0.05
+0.05 <= initial prob labour saving[health] = 0.05  <= 0.05

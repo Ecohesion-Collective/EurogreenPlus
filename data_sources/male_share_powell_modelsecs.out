@@ -1,0 +1,99 @@
+:COMSYS After 91678431 simulations
+:COMSYS Best payoff is 1130.87
+:COMSYS User terminated multiple search session
+:OPTIMIZER=Powell
+:SENSITIVITY=Off
+:MULTIPLE_START=RRandom
+:RANDOM_NUMBER=Default
+:OUTPUT_LEVEL=On
+:TRACE=Off
+:MAX_ITERATIONS=100000000
+:RESTART_MAX=1000000
+:PASS_LIMIT=2
+:FRACTIONAL_TOLERANCE=0.0003
+:TOLERANCE_MULTIPLIER=21
+:ABSOLUTE_TOLERANCE=1
+:SCALE_ABSOLUTE=1
+:VECTOR_POINTS=25
+:MCLIMIT=0
+:MCJUMP=0.05
+:MCBURNIN=0
+:MCDELTA=0.0001
+:MCTEMP=1
+:MCNCHAINS=2
+:MCUPDATEPAIRS=2
+:MCSCHEDULE=0
+:MCOUTLIER=0.05
+:MCXOVER=0.2
+:MCCOOLING=1000
+:MCINITMETHOD=0
+:MCPAYOFFTYPE=0
+:MCGAMMA=1
+:MCRECORD=0
+:MCKNN=0
+:MCEPSILON=0.01
+:MCFTEMP=1
+-0.025 <= male share trend is[agri,hig] = 0.0141244  <= 0.025
+-0.025 <= male share trend is[agri,mid] = 0.00902932  <= 0.025
+-0.025 <= male share trend is[agri,low] = 0.00993548  <= 0.025
+-0.025 <= male share trend is[mining,hig] = 0.020461  <= 0.025
+-0.025 <= male share trend is[mining,mid] = 0.00045461  <= 0.025
+-0.025 <= male share trend is[mining,low] = 0.00558952  <= 0.025
+-0.025 <= male share trend is[manufacturing,hig] = -0.00275815  <= 0.025
+-0.025 <= male share trend is[manufacturing,mid] = 0.00711804  <= 0.025
+-0.025 <= male share trend is[manufacturing,low] = 0.00884385  <= 0.025
+-0.025 <= male share trend is[petroleum,hig] = -0.00275815  <= 0.025
+-0.025 <= male share trend is[petroleum,mid] = 0.00711804  <= 0.025
+-0.025 <= male share trend is[petroleum,low] = 0.00884385  <= 0.025
+-0.025 <= male share trend is[vehicles,hig] = -0.00275815  <= 0.025
+-0.025 <= male share trend is[vehicles,mid] = 0.00711804  <= 0.025
+-0.025 <= male share trend is[vehicles,low] = 0.00884385  <= 0.025
+-0.025 <= male share trend is[electricity ind,hig] = 0.000971626  <= 0.025
+-0.025 <= male share trend is[electricity ind,mid] = 0.00278089  <= 0.025
+-0.025 <= male share trend is[electricity ind,low] = 0.00222716  <= 0.025
+-0.025 <= male share trend is[gas ind,hig] = 0.000971626  <= 0.025
+-0.025 <= male share trend is[gas ind,mid] = 0.00278089  <= 0.025
+-0.025 <= male share trend is[gas ind,low] = 0.00222716  <= 0.025
+-0.025 <= male share trend is[heat ind,hig] = 0.000971626  <= 0.025
+-0.025 <= male share trend is[heat ind,mid] = 0.00278089  <= 0.025
+-0.025 <= male share trend is[heat ind,low] = 0.00222716  <= 0.025
+-0.025 <= male share trend is[water,hig] = 0.00414415  <= 0.025
+-0.025 <= male share trend is[water,mid] = 0.00821887  <= 0.025
+-0.025 <= male share trend is[water,low] = 0.00396299  <= 0.025
+-0.025 <= male share trend is[construction,hig] = -0.00881739  <= 0.025
+-0.025 <= male share trend is[construction,mid] = 0.00546369  <= 0.025
+-0.025 <= male share trend is[construction,low] = 0.0055745  <= 0.025
+-0.025 <= male share trend is[trade,hig] = -0.000337991  <= 0.025
+-0.025 <= male share trend is[trade,mid] = 0.00590259  <= 0.025
+-0.025 <= male share trend is[trade,low] = 0.00860455  <= 0.025
+-0.025 <= male share trend is[transport,hig] = 0.0038121  <= 0.025
+-0.025 <= male share trend is[transport,mid] = 0.00544151  <= 0.025
+-0.025 <= male share trend is[transport,low] = 0.00574098  <= 0.025
+-0.025 <= male share trend is[hospitality,hig] = 0.0112853  <= 0.025
+-0.025 <= male share trend is[hospitality,mid] = 0.00460149  <= 0.025
+-0.025 <= male share trend is[hospitality,low] = 0.00594787  <= 0.025
+-0.025 <= male share trend is[ict,hig] = 0.009728594  <= 0.025
+-0.025 <= male share trend is[ict,mid] = 0.006443307  <= 0.025
+-0.025 <= male share trend is[ict,low] = 0.008025916  <= 0.025
+-0.025 <= male share trend is[finance,hig] = 0.000211146  <= 0.025
+-0.025 <= male share trend is[finance,mid] = 0.00503159  <= 0.025
+-0.025 <= male share trend is[finance,low] = -0.00739925  <= 0.025
+-0.025 <= male share trend is[realestate,hig] = 0.0012983  <= 0.025
+-0.025 <= male share trend is[realestate,mid] = 0.00784858  <= 0.025
+-0.025 <= male share trend is[realestate,low] = 0.0193432  <= 0.025
+-0.025 <= male share trend is[profserv,hig] = 0.001326879  <= 0.025
+-0.025 <= male share trend is[profserv,mid] = 0.008866343  <= 0.025
+-0.025 <= male share trend is[profserv,low] = 0.004728986  <= 0.025
+-0.025 <= male share trend is[public,hig] = 0.00526333  <= 0.025
+-0.025 <= male share trend is[public,mid] = 0.00814406  <= 0.025
+-0.025 <= male share trend is[public,low] = 0.00558167  <= 0.025
+-0.025 <= male share trend is[education,hig] = 0.00583303  <= 0.025
+-0.025 <= male share trend is[education,mid] = 0.0073354  <= 0.025
+-0.025 <= male share trend is[education,low] = 0.00188273  <= 0.025
+-0.025 <= male share trend is[health,hig] = -0.00142891  <= 0.025
+-0.025 <= male share trend is[health,mid] = 0.00563985  <= 0.025
+-0.025 <= male share trend is[health,low] = 0.00601021  <= 0.025
+-0.025 <= male share trend is[households,hig] = 0  <= 0.025
+-0.025 <= male share trend is[households,mid] = 0  <= 0.025
+-0.025 <= male share trend is[households,low] = 0  <= 0.025
+0 <= sens male share unemp s = 0.201079  <= 100

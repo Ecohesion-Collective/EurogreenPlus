@@ -1,0 +1,53 @@
+:COMSYS After 6631884 simulations
+:COMSYS Best payoff is -4492.07
+:COMSYS User terminated multiple search session
+:OPTIMIZER=Powell
+:SENSITIVITY=Payoff Value=1.92
+:MULTIPLE_START=RRandom
+:RANDOM_NUMBER=Default
+:OUTPUT_LEVEL=On
+:TRACE=Off
+:MAX_ITERATIONS=10000000
+:RESTART_MAX=100000
+:PASS_LIMIT=2
+:FRACTIONAL_TOLERANCE=0.0003
+:TOLERANCE_MULTIPLIER=21
+:ABSOLUTE_TOLERANCE=1
+:SCALE_ABSOLUTE=1
+:VECTOR_POINTS=25
+:MCLIMIT=0
+:MCJUMP=0.05
+:MCBURNIN=0
+:MCDELTA=0.0001
+:MCTEMP=1
+:MCNCHAINS=2
+:MCUPDATEPAIRS=2
+:MCSCHEDULE=0
+:MCOUTLIER=0.05
+:MCXOVER=0.2
+:MCCOOLING=1000
+:MCINITMETHOD=0
+:MCPAYOFFTYPE=0
+:MCGAMMA=1
+:MCRECORD=0
+:MCKNN=0
+:MCEPSILON=0.01
+:MCFTEMP=1
+4 <= desired investment adjustment time[agri] = 10.193  <= 20
+4 <= desired investment adjustment time[mining] = 9.67781  <= 20
+4 <= desired investment adjustment time[manufacturing] = 4.46788  <= 20
+4 <= desired investment adjustment time[petroleum] = 9.60585  <= 20
+4 <= desired investment adjustment time[vehicles] = 7.94103  <= 20
+4 <= desired investment adjustment time[gas ind] = 14.0314  <= 20
+4 <= desired investment adjustment time[heat ind] = 17.4708  <= 20
+4 <= desired investment adjustment time[water] = 8.52896  <= 20
+4 <= desired investment adjustment time[construction] = 10.2004  <= 20
+4 <= desired investment adjustment time[trade] = 6.26178  <= 20
+4 <= desired investment adjustment time[transport] = 20  <= 20
+4 <= desired investment adjustment time[hospitality] = 4  <= 20
+4 <= desired investment adjustment time[ict] = 9.39262  <= 20
+4 <= desired investment adjustment time[finance] = 5.15547  <= 20
+4 <= desired investment adjustment time[profserv] = 8.57416  <= 20
+4 <= desired investment adjustment time[public] = 12.0495  <= 20
+4 <= desired investment adjustment time[education] = 4.26692  <= 20
+4 <= desired investment adjustment time[health] = 5.2571  <= 20

@@ -1,0 +1,59 @@
+:COMSYS After 7097 simulations
+:COMSYS Best payoff is -285.93
+:COMSYS User terminated multiple search session
+:OPTIMIZER=Powell
+:SENSITIVITY=Payoff Value=1.92
+:MULTIPLE_START=RRandom
+:RANDOM_NUMBER=Default
+:OUTPUT_LEVEL=On
+:TRACE=Off
+:MAX_ITERATIONS=10000
+:RESTART_MAX=10
+:PASS_LIMIT=2
+:FRACTIONAL_TOLERANCE=0.0003
+:TOLERANCE_MULTIPLIER=21
+:ABSOLUTE_TOLERANCE=1
+:SCALE_ABSOLUTE=1
+:VECTOR_POINTS=25
+:MCLIMIT=0
+:MCJUMP=0.05
+:MCBURNIN=0
+:MCDELTA=0.0001
+:MCTEMP=1
+:MCNCHAINS=2
+:MCUPDATEPAIRS=2
+:MCSCHEDULE=0
+:MCOUTLIER=0.05
+:MCXOVER=0.2
+:MCCOOLING=1000
+:MCINITMETHOD=0
+:MCPAYOFFTYPE=0
+:MCGAMMA=1
+:MCRECORD=0
+:MCKNN=0
+:MCEPSILON=0.01
+:MCFTEMP=1
+-0.15 <= c19 LFPR 2020[female,low] = -0.141737  <= 0
+-0.15 <= c19 LFPR 2020[female,mid] = -0.130358  <= 0
+-0.15 <= c19 LFPR 2020[female,hig] = -0.134803  <= 0
+-0.15 <= c19 LFPR 2020[male,low] = -0.126665  <= 0
+-0.15 <= c19 LFPR 2020[male,mid] = -0.142067  <= 0
+-0.15 <= c19 LFPR 2020[male,hig] = -0.139982  <= 0
+0 <= c19 LFPR 2021[female,low] = 0.0990099  <= 0.12
+0 <= c19 LFPR 2021[female,mid] = 0.0707957  <= 0.12
+0 <= c19 LFPR 2021[female,hig] = 0.07  <= 0.12
+0 <= c19 LFPR 2021[male,low] = 0.12  <= 0.12
+0 <= c19 LFPR 2021[male,mid] = 0.0893209  <= 0.12
+0 <= c19 LFPR 2021[male,hig] = 0.073437  <= 0.12
+0 <= c19 LFPR 2022[female,low] = 0.034885  <= 0.06
+0 <= c19 LFPR 2022[female,mid] = 0.0285017  <= 0.06
+0 <= c19 LFPR 2022[female,hig] = 0.039321  <= 0.06
+0 <= c19 LFPR 2022[male,low] = 0.0527572  <= 0.06
+0 <= c19 LFPR 2022[male,mid] = 0.0338191  <= 0.06
+0 <= c19 LFPR 2022[male,hig] = 0.040778  <= 0.06
+0 <= c19 LFPR 2023[female,low] = 0.02  <= 0.02
+0 <= c19 LFPR 2023[female,mid] = 0.00996293  <= 0.02
+0 <= c19 LFPR 2023[female,hig] = 0.039321  <= 0.02
+0 <= c19 LFPR 2023[male,low] = 0.00975333  <= 0.02
+0 <= c19 LFPR 2023[male,mid] = 0.0012362  <= 0.02
+0 <= c19 LFPR 2023[male,hig] = 0.040778  <= 0.02
