@@ -1,4 +1,8 @@
 {UTF-8}
+{UTF-8}
+
+
+
 A columns electricity[ind,electricity subs]=
 	GET XLS CONSTANTS('?main', 'electricity', 'a_dom_elec' )
 	~	Dmnl
@@ -235,6 +239,11 @@ Act additional expense compensation=
 	~	If expenses from socioeconomic policies should be compensated by financial \
 		and corporate tax increases
 	|
+
+Act adjustment to labour constraints=
+	0
+	~	
+	~		|
 
 Act BI=
 	0
@@ -696,8 +705,9 @@ additional LF required[skill]=
 	~		|
 
 additional migration pop=
-	sum(additional WA pop required s[skill!]/skill share working age pop[skill!])*migration reaction
-/migration WA share
+	sum(additional WA pop required s[skill!]/skill share working age pop[skill!])
+	*Act adjustment to labour constraints*migration reaction
+	/migration WA share
 	~	Person/(1*1*Year)
 	~		|
 
@@ -707,8 +717,9 @@ additional migration pop cg[gender,cohorts]=
 	~		|
 
 additional WA pop migration targeted[skill,gender,WA cohorts]=
-	additional WA pop required s[skill]*migration reaction*net migration WA gender and age distribution
-[gender,WA cohorts]
+	additional WA pop required s[skill]
+	*Act adjustment to labour constraints*migration reaction
+	*net migration WA gender and age distribution[gender,WA cohorts]
 	~	1*Person/Year
 	~		|
 
@@ -1184,6 +1195,11 @@ b param beta distribution i[agri]=
 	~	Dmnl
 	~	b parameter of the climate damage Beta distribution
 	|
+
+b real=
+	b/CPI delay
+	~	Euro constant
+	~		|
 
 b RoW= INTEG (
 	in bonds RoW,
@@ -1676,6 +1692,16 @@ births g[gender]=
 	~	People/Year
 	~	*1.3
 	|
+
+bottom 40 rq[regions,quintiles]=
+	IF THEN ELSE(deciles rq[regions,quintiles]<=4, 1 , 0 )
+	~	Dmnl
+	~		|
+
+bottom 40 to national mean yd hhs ratio=
+	mean yd hhs real bottom 40/mean yd hhs real
+	~	Dmnl
+	~		|
 
 bottom 50 direct emissions C intensity=
 	sum(direct emissions hh rq[regions!,quintiles!]*bottom 50 rq[regions!,quintiles!])/
@@ -2500,6 +2526,14 @@ c pp p shares real[coicop]=
 	~	Dmnl
 	~		|
 
+c pp shares dec[deciles]=
+	sum(c ESc pp rqi[regions!,quintiles!,ind!]
+	*map rq dec[deciles,regions!,quintiles!])/
+	sum(c ESc pp rqi[regions!,quintiles!,ind!])
+	~	Dmnl
+	~	Shares of total consumption in purchaser prices per decile.
+	|
+
 c real bp rq i[regions,quintiles,ind]=
 	c real dom ESc rq i[regions,quintiles,ind]+c real imp ESc rq i[regions,quintiles,ind
 ]
@@ -2873,6 +2907,13 @@ capacity almost constructed investment[e solarth]=
 		construction time for RES is 1 year, but the minimum delay time in delay \
 		fixed is TIME STEP, RES investment constructed is equal to RES investment.
 	|
+
+capacity almost constructed investment fossils=
+	capacity almost constructed investment[e coal]
+	+capacity almost constructed investment[e gas]
+	+capacity almost constructed investment[e petroleum]
+	~	GW/Year
+	~		|
 
 capacity construction time[e coal]=
 	4 ~~|
@@ -3334,10 +3375,16 @@ Carbon tax nace=
 
 carbon tax rate=
 	IF THEN ELSE(Time<S Time Policy start,0,
-	Act carbon tax*(initial CT + (S carbon tax max - initial CT)*(Time - S Time Policy start
--Year 1)/(S Time end - S Time Policy start))
+	Act carbon tax*(initial CT*CPI delay + (S carbon tax max*CPI delay - initial CT*CPI delay
+)*(Time - S Time Policy start
+	-Year 1)/(S Time end - S Time Policy start))
 	)
 	~	Euro/tCO2eq
+	~		|
+
+carbon tax rate real=
+	carbon tax rate/CPI delay
+	~	Euro constant/tCO2eq
 	~		|
 
 carbon tax related costs hhs rq[regions,quintiles]=
@@ -3957,7 +4004,7 @@ component Theil L[gender,ind,skill]=
 	~		|
 
 component Theil L yd[inc cat]=
-	pop share d[inc cat]*ln(XIDZ(pop share d[inc cat],yd share[inc cat],1))
+	pop share d[inc cat]*ln(XIDZ(pop share d[inc cat],max(yd share[inc cat],0),1))
 	~	Dmnl
 	~		|
 
@@ -3971,7 +4018,9 @@ component Theil T[gender,ind,skill]=
 	~		|
 
 component Theil T yd[inc cat]=
-	yd share[inc cat]*ln(XIDZ(yd share[inc cat],pop share d[inc cat],1))
+	IF THEN ELSE(yd share[inc cat]>0,
+	yd share[inc cat]*ln(XIDZ(yd share[inc cat],pop share d[inc cat],1)),
+	0)
 	~	Dmnl
 	~		|
 
@@ -5759,8 +5808,8 @@ Div i[realestate]=
 	|
 
 Div rate=
-	IF THEN ELSE(Act Dividend Reduction=1:AND:Time>S Time Policy start,1-percentage dividend reduction
-,1)*0.3
+	IF THEN ELSE(Act Dividend Reduction=1:AND:Time>=S Time Policy start,1-percentage dividend reduction
+	,1)*0.3
 	~	Dmnl
 	~	fixed proportion of profits after investments distributed as dividends.
 		calibrated: 24062021 - public, educ and health set to 0.
@@ -6400,7 +6449,8 @@ efficiency gains elec=
 	0.4
 	~	Dmnl
 	~	Fractional efficiency gains due to electrification
-		0.810168
+		0.810168 (from PNIEC; would include insulation and other things) or
+		0.4 (efficiency gains from electrification only)
 	|
 
 efficiency gains fd dom[regions,quintiles]=
@@ -6723,7 +6773,7 @@ electrification demand imp[ind]=
 	~		|
 
 electrification ex switch=
-	IF THEN ELSE(electrification fd switch=0, 0 , 1)
+	IF THEN ELSE(electrification fd switch=0, 0 , exports electrification switch)
 	~	Dmnl
 	~	If overall final demand electrification switch is OFF, this one is OFF (0) \
 		too. If not, the last value in the bracket determines whether this \
@@ -7374,6 +7424,11 @@ emissions i[ind]=
 Emissions intensity decomp=
 	100*(total emissions/total end use)/(total emissions init/total end use init)
 	~	Dmnl
+	~		|
+
+emissions intensity electricity=
+	emissions per output electricity/electricity per output
+	~	tCO2eq/(Hours*GW)
 	~		|
 
 Emissions intensity GDP decomp=
@@ -9478,6 +9533,13 @@ exports cc paid=
 	~	Euro/Year
 	~		|
 
+exports electrification switch=
+	1
+	~	Dmnl
+	~	Determines whether demand for exports is electrified or not, i.e. whether \
+		electrification is at the global or national level.
+	|
+
 exports real total=
 	sum(ex real ESC i[ind!])
 	~	Euro constant/Year
@@ -9847,6 +9909,40 @@ final demand structure[ind]=
 final end use share electricity=
 	0.3
 	~	
+	~		|
+
+final energy consumption coal=
+	end use Z nrg[coal] + end use C nrg[coal]
+	~	TJ/Year
+	~		|
+
+final energy consumption of electricity=
+	end use Z nrg[elec] + end use C nrg[elec]
+	~	TJ/Year
+	~		|
+
+final energy consumption of gas=
+	end use Z nrg[gas] + end use C nrg[gas]
+	~	TJ/Year
+	~		|
+
+final energy consumption other=
+	total end use
+	-final energy consumption of electricity
+	-final energy consumption of gas
+	-final energy consumption solid
+	~	TJ/Year
+	~		|
+
+final energy consumption solid=
+	final energy consumption solid bio
+	+final energy consumption coal
+	~	TJ/Year
+	~		|
+
+final energy consumption solid bio=
+	end use Z nrg[bio] + end use C nrg[bio]
+	~	TJ/Year
 	~		|
 
 final flex share nec=
@@ -10429,6 +10525,11 @@ g ff ee T4 i[ind]=
 
 g GDP nom=
 	(GDP nom-GDP nom delay)/GDP nom delay
+	~	Dmnl
+	~		|
+
+g GDP per capita real=
+	(per capita GDP real-per capita GDP real delay)/per capita GDP real delay
 	~	Dmnl
 	~		|
 
@@ -12226,7 +12327,7 @@ hours i[ind]=
 	S1 hours i[ind]*IF THEN ELSE(Time<S Time Policy start,
 	                1,
 	                1+Act WTR *min(S Time end-S Time Policy start,Time-S Time Policy start
-)*(S working hours/(S Time end-S Time Policy start)/Hours 1)
+	)*(-S working hours/(S Time end-S Time Policy start)/Hours 1)
 	                )
 	~	Hours
 	~	industry specific yearly hours worked
@@ -13836,6 +13937,11 @@ init pension wage ratio gs[gender,skill]=
 		0.87, 0.98, 2.09;
 	|
 
+init per capita GDP real= INITIAL(
+	per capita GDP real)
+	~	Euro constant/Person
+	~		|
+
 init per unit inv costs hydro=
 	4.4069e+09
 	~	Euro constant/GW
@@ -14030,7 +14136,7 @@ initial CPI decile[deciles]= INITIAL(
 	~		|
 
 initial CT=
-	135*CPI delay
+	135
 	~	Euro/tCO2eq
 	~	50 is close to the current EU ETS price
 	|
@@ -15509,13 +15615,13 @@ LFPR trends[gender,skill]=
 	|
 
 LFPR u coeff=
-	0.5*0
+	0.5
 	~	
 	~		|
 
 LFPR u effect[skill]=
 	IF THEN ELSE(u s[skill]>threshold u,0,
-	LFPR u coeff*(threshold u-u s[skill]))
+	Act adjustment to labour constraints*LFPR u coeff*(threshold u-u s[skill]))
 	~	
 	~	EXP(LFPR u coeff*(threshold u-u s[skill]))-1
 	|
@@ -15532,6 +15638,15 @@ life expectancy[gender]=
 Life satisfaction=
 	sum(Life satisfaction rq[regions!,quintiles!]*num hhs delayed shares rq[regions!,quintiles
 !])
+	~	Score
+	~		|
+
+Life satisfaction bottom 50=
+	sum(Life satisfaction rq[regions!,quintiles!]*
+	bottom 50 rq[regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])/
+	sum(bottom 50 rq[regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])
 	~	Score
 	~		|
 
@@ -15562,10 +15677,34 @@ Life satisfaction coefficients working time[gender]=
 		HBS-AVQ-SHIW 2014-2016.
 	|
 
+Life satisfaction dec[deciles]=
+	sum(Life satisfaction rq[regions!,quintiles!]*
+	map rq dec[deciles,regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])/
+	sum(map rq dec[deciles,regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])
+	~	
+	~		|
+
+Life satisfaction gini=
+	0.5 *
+	sum(LS pre gini sum j[rq cat!])
+	~	
+	~		|
+
 Life satisfaction intercept[regions,quintiles]=
 	Life satisfaction rq initial[regions,quintiles]
 	-Life satisfaction coefficient lnx*ln(c hhs rq init[regions,quintiles])
 	~	
+	~		|
+
+Life satisfaction middle 40=
+	sum(Life satisfaction rq[regions!,quintiles!]
+	*middle 40 rq[regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])/
+	sum(middle 40 rq[regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])
+	~	Score
 	~		|
 
 Life Satisfaction normalized r[regions]=
@@ -15601,6 +15740,15 @@ regions
 Life satisfaction rq initial[regions,quintiles]=
 	GET XLS CONSTANTS( '?wb' , 'wellbeing' , 'lifesatisf_rq' )
 	~	
+	~		|
+
+Life satisfaction top 10=
+	sum(Life satisfaction rq[regions!,quintiles!]
+	*top 10 rq[regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])/
+	sum(top 10 rq[regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])
+	~	Score
 	~		|
 
 lifetime capital electricity=
@@ -15734,6 +15882,123 @@ low skill transformation JG init[gender,mid]=
 low skill transformation JG init[gender,hig]=
 	0.3
 	~	Dmnl
+	~		|
+
+LS pre gini sum j[rq cat]=
+	sum(num hhs delayed shares rq cat[rq cat]*num hhs delayed shares rq cat[rq cat j!] *
+	ABS(LS shares rq cat[rq cat]/num hhs delayed shares rq cat[rq cat] - 
+	LS shares rq cat[rq cat j!]/num hhs delayed shares rq cat[rq cat j!]))
+	~	
+	~		|
+
+LS shares rq[regions,quintiles]=
+	Life satisfaction rq[regions,quintiles]/sum(Life satisfaction rq[regions!,quintiles!
+])
+	~	
+	~		|
+
+LS shares rq cat[Piemonte q1]=
+	LS shares rq[Piemonte,q1] ~~|
+LS shares rq cat[Piemonte q2] = LS shares rq[Piemonte,q2] ~~|
+LS shares rq cat[Piemonte q3] = LS shares rq[Piemonte,q3] ~~|
+LS shares rq cat[Piemonte q4] = LS shares rq[Piemonte,q4] ~~|
+LS shares rq cat[Piemonte q5] = LS shares rq[Piemonte,q5] ~~|
+LS shares rq cat[Valle d'Aosta q1] = LS shares rq[Valle d'Aosta,q1] ~~|
+LS shares rq cat[Valle d'Aosta q2] = LS shares rq[Valle d'Aosta,q2] ~~|
+LS shares rq cat[Valle d'Aosta q3] = LS shares rq[Valle d'Aosta,q3] ~~|
+LS shares rq cat[Valle d'Aosta q4] = LS shares rq[Valle d'Aosta,q4] ~~|
+LS shares rq cat[Valle d'Aosta q5] = LS shares rq[Valle d'Aosta,q5] ~~|
+LS shares rq cat[Lombardia q1] = LS shares rq[Lombardia,q1] ~~|
+LS shares rq cat[Lombardia q2] = LS shares rq[Lombardia,q2] ~~|
+LS shares rq cat[Lombardia q3] = LS shares rq[Lombardia,q3] ~~|
+LS shares rq cat[Lombardia q4] = LS shares rq[Lombardia,q4] ~~|
+LS shares rq cat[Lombardia q5] = LS shares rq[Lombardia,q5] ~~|
+LS shares rq cat[Trentino q1] = LS shares rq[Trentino,q1] ~~|
+LS shares rq cat[Trentino q2] = LS shares rq[Trentino,q2] ~~|
+LS shares rq cat[Trentino q3] = LS shares rq[Trentino,q3] ~~|
+LS shares rq cat[Trentino q4] = LS shares rq[Trentino,q4] ~~|
+LS shares rq cat[Trentino q5] = LS shares rq[Trentino,q5] ~~|
+LS shares rq cat[Veneto q1] = LS shares rq[Veneto,q1] ~~|
+LS shares rq cat[Veneto q2] = LS shares rq[Veneto,q2] ~~|
+LS shares rq cat[Veneto q3] = LS shares rq[Veneto,q3] ~~|
+LS shares rq cat[Veneto q4] = LS shares rq[Veneto,q4] ~~|
+LS shares rq cat[Veneto q5] = LS shares rq[Veneto,q5] ~~|
+LS shares rq cat[Friuli q1] = LS shares rq[Friuli,q1] ~~|
+LS shares rq cat[Friuli q2] = LS shares rq[Friuli,q2] ~~|
+LS shares rq cat[Friuli q3] = LS shares rq[Friuli,q3] ~~|
+LS shares rq cat[Friuli q4] = LS shares rq[Friuli,q4] ~~|
+LS shares rq cat[Friuli q5] = LS shares rq[Friuli,q5] ~~|
+LS shares rq cat[Liguria q1] = LS shares rq[Liguria,q1] ~~|
+LS shares rq cat[Liguria q2] = LS shares rq[Liguria,q2] ~~|
+LS shares rq cat[Liguria q3] = LS shares rq[Liguria,q3] ~~|
+LS shares rq cat[Liguria q4] = LS shares rq[Liguria,q4] ~~|
+LS shares rq cat[Liguria q5] = LS shares rq[Liguria,q5] ~~|
+LS shares rq cat[Emilia Romagna q1] = LS shares rq[Emilia Romagna,q1] ~~|
+LS shares rq cat[Emilia Romagna q2] = LS shares rq[Emilia Romagna,q2] ~~|
+LS shares rq cat[Emilia Romagna q3] = LS shares rq[Emilia Romagna,q3] ~~|
+LS shares rq cat[Emilia Romagna q4] = LS shares rq[Emilia Romagna,q4] ~~|
+LS shares rq cat[Emilia Romagna q5] = LS shares rq[Emilia Romagna,q5] ~~|
+LS shares rq cat[Toscana q1] = LS shares rq[Toscana,q1] ~~|
+LS shares rq cat[Toscana q2] = LS shares rq[Toscana,q2] ~~|
+LS shares rq cat[Toscana q3] = LS shares rq[Toscana,q3] ~~|
+LS shares rq cat[Toscana q4] = LS shares rq[Toscana,q4] ~~|
+LS shares rq cat[Toscana q5] = LS shares rq[Toscana,q5] ~~|
+LS shares rq cat[Umbria q1] = LS shares rq[Umbria,q1] ~~|
+LS shares rq cat[Umbria q2] = LS shares rq[Umbria,q2] ~~|
+LS shares rq cat[Umbria q3] = LS shares rq[Umbria,q3] ~~|
+LS shares rq cat[Umbria q4] = LS shares rq[Umbria,q4] ~~|
+LS shares rq cat[Umbria q5] = LS shares rq[Umbria,q5] ~~|
+LS shares rq cat[Marche q1] = LS shares rq[Marche,q1] ~~|
+LS shares rq cat[Marche q2] = LS shares rq[Marche,q2] ~~|
+LS shares rq cat[Marche q3] = LS shares rq[Marche,q3] ~~|
+LS shares rq cat[Marche q4] = LS shares rq[Marche,q4] ~~|
+LS shares rq cat[Marche q5] = LS shares rq[Marche,q5] ~~|
+LS shares rq cat[Lazio q1] = LS shares rq[Lazio,q1] ~~|
+LS shares rq cat[Lazio q2] = LS shares rq[Lazio,q2] ~~|
+LS shares rq cat[Lazio q3] = LS shares rq[Lazio,q3] ~~|
+LS shares rq cat[Lazio q4] = LS shares rq[Lazio,q4] ~~|
+LS shares rq cat[Lazio q5] = LS shares rq[Lazio,q5] ~~|
+LS shares rq cat[Abruzzo q1] = LS shares rq[Abruzzo,q1] ~~|
+LS shares rq cat[Abruzzo q2] = LS shares rq[Abruzzo,q2] ~~|
+LS shares rq cat[Abruzzo q3] = LS shares rq[Abruzzo,q3] ~~|
+LS shares rq cat[Abruzzo q4] = LS shares rq[Abruzzo,q4] ~~|
+LS shares rq cat[Abruzzo q5] = LS shares rq[Abruzzo,q5] ~~|
+LS shares rq cat[Molise q1] = LS shares rq[Molise,q1] ~~|
+LS shares rq cat[Molise q2] = LS shares rq[Molise,q2] ~~|
+LS shares rq cat[Molise q3] = LS shares rq[Molise,q3] ~~|
+LS shares rq cat[Molise q4] = LS shares rq[Molise,q4] ~~|
+LS shares rq cat[Molise q5] = LS shares rq[Molise,q5] ~~|
+LS shares rq cat[Campania q1] = LS shares rq[Campania,q1] ~~|
+LS shares rq cat[Campania q2] = LS shares rq[Campania,q2] ~~|
+LS shares rq cat[Campania q3] = LS shares rq[Campania,q3] ~~|
+LS shares rq cat[Campania q4] = LS shares rq[Campania,q4] ~~|
+LS shares rq cat[Campania q5] = LS shares rq[Campania,q5] ~~|
+LS shares rq cat[Puglia q1] = LS shares rq[Puglia,q1] ~~|
+LS shares rq cat[Puglia q2] = LS shares rq[Puglia,q2] ~~|
+LS shares rq cat[Puglia q3] = LS shares rq[Puglia,q3] ~~|
+LS shares rq cat[Puglia q4] = LS shares rq[Puglia,q4] ~~|
+LS shares rq cat[Puglia q5] = LS shares rq[Puglia,q5] ~~|
+LS shares rq cat[Basilicata q1] = LS shares rq[Basilicata,q1] ~~|
+LS shares rq cat[Basilicata q2] = LS shares rq[Basilicata,q2] ~~|
+LS shares rq cat[Basilicata q3] = LS shares rq[Basilicata,q3] ~~|
+LS shares rq cat[Basilicata q4] = LS shares rq[Basilicata,q4] ~~|
+LS shares rq cat[Basilicata q5] = LS shares rq[Basilicata,q5] ~~|
+LS shares rq cat[Calabria q1] = LS shares rq[Calabria,q1] ~~|
+LS shares rq cat[Calabria q2] = LS shares rq[Calabria,q2] ~~|
+LS shares rq cat[Calabria q3] = LS shares rq[Calabria,q3] ~~|
+LS shares rq cat[Calabria q4] = LS shares rq[Calabria,q4] ~~|
+LS shares rq cat[Calabria q5] = LS shares rq[Calabria,q5] ~~|
+LS shares rq cat[Sicilia q1] = LS shares rq[Sicilia,q1] ~~|
+LS shares rq cat[Sicilia q2] = LS shares rq[Sicilia,q2] ~~|
+LS shares rq cat[Sicilia q3] = LS shares rq[Sicilia,q3] ~~|
+LS shares rq cat[Sicilia q4] = LS shares rq[Sicilia,q4] ~~|
+LS shares rq cat[Sicilia q5] = LS shares rq[Sicilia,q5] ~~|
+LS shares rq cat[Sardegna q1] = LS shares rq[Sardegna,q1] ~~|
+LS shares rq cat[Sardegna q2] = LS shares rq[Sardegna,q2] ~~|
+LS shares rq cat[Sardegna q3] = LS shares rq[Sardegna,q3] ~~|
+LS shares rq cat[Sardegna q4] = LS shares rq[Sardegna,q4] ~~|
+LS shares rq cat[Sardegna q5] = LS shares rq[Sardegna,q5]
+	~	
 	~		|
 
 macrosect and res:
@@ -17274,6 +17539,15 @@ mean yd hhs real=
 	~	Real disposable household income per household, national average.
 	|
 
+mean yd hhs real bottom 40=
+	sum(yd hhs rq real[regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!]
+	*bottom 40 rq[regions!,quintiles!])/
+	sum(num hhs delayed shares rq[regions!,quintiles!]
+	*bottom 40 rq[regions!,quintiles!])
+	~	Euro constant/(Year*Household)
+	~		|
+
 mean yd hhs real nuovo=
 	sum(yd hhs rq real nuovo[regions!,quintiles!]*num hhs delayed shares rq[regions!,quintiles
 !])
@@ -17412,7 +17686,7 @@ midpoint logistic curve=
 	~		|
 
 migration reaction=
-	0.1*0
+	0.1
 	~	Dmnl/Year
 	~		|
 
@@ -20505,7 +20779,12 @@ per capita excess of direct and embedded emissions rq[regions,quintiles]=
 
 per capita GDP real=
 	GDP real/population total*People 1
-	~	Euro constant
+	~	Euro constant/Person
+	~		|
+
+per capita GDP real delay=
+	DELAY FIXED(per capita GDP real, 1 , init per capita GDP real )
+	~	Euro constant/Person
 	~		|
 
 per capita pub exp on access growth=
@@ -21726,6 +22005,13 @@ production capacity[e techn]= INTEG (
 	~	Stock of productive capacity by techology.
 	|
 
+production capacity fossils=
+	production capacity[e coal]
+	+production capacity[e gas]
+	+production capacity[e petroleum]
+	~	GW
+	~		|
+
 production shares[e techn]=
 	production by technology b[e techn]/sum(production by technology b[e techn!])
 	~	Dmnl
@@ -22603,7 +22889,7 @@ rq shares gs[male,hig,regions,quintiles]=
 	|
 
 S carbon tax max=
-	245*CPI delay
+	245
 	~	Euro
 	~	in euros (maxreached in 2050, that is the policy target)
 		yearly increase of the carbon tax
@@ -22825,7 +23111,7 @@ S vat rate=
 	~		|
 
 S working hours=
-	-0.15
+	0.15
 	~	Hours
 	~	range: -0.2 -0.125 0  
 		
@@ -24033,13 +24319,14 @@ skill transition 4564 out[gender,hig]=
 	~		|
 
 skill transitions u coeff=
-	0.5*0
+	0.5
 	~	
 	~		|
 
 skill transitions u effect[skill]=
 	IF THEN ELSE(u s[skill]>threshold u,0,
-	skill transitions u coeff*(threshold u-u s[skill]))
+	Act adjustment to labour constraints*skill transitions u coeff*(threshold u-u s[skill
+]))
 	~	1/Year
 	~	EXP(skill transitions u coeff*(threshold u-u s[skill]))-1
 	|
@@ -25476,6 +25763,11 @@ tot gov rev=
 	~	total government revenue
 	|
 
+tot gov rev real=
+	tot gov rev/CPI
+	~	Euro constant/Year
+	~		|
+
 tot nom check=
 	c total nom bp-c tot pp
 	~	
@@ -25506,6 +25798,15 @@ total adjustment[regions,inc cat,quintiles]=
 	allocate discrepancies across rows[regions,inc cat,quintiles]+
 	negatives equal to zero[regions,inc cat,quintiles]
 	~	
+	~		|
+
+Total annual new installation of electricity generation capacity=
+	capacity almost constructed investment fossils
+	+capacity almost constructed investment[e hydro]
+	+capacity almost constructed investment[e nec]
+	+capacity almost constructed investment[e solarpv]
+	+capacity almost constructed investment[e wind]
+	~	GW/Year
 	~		|
 
 total capacity[e techn] :EXCEPT:    [e hydro]=
@@ -25803,6 +26104,15 @@ total imp real=
 total imp real i[ind]=
 	total imp nom i[ind]/p i[ind]
 	~	
+	~		|
+
+total installed production capacity=
+	production capacity fossils
+	+production capacity[e hydro]
+	+production capacity[e nec]
+	+production capacity[e solarpv]
+	+production capacity[e wind]
+	~	GW
 	~		|
 
 Total loans initial=
@@ -26744,6 +27054,11 @@ VA manufacturing=
 VA public=
 	VA i[public]+VA i[education]+VA i[health]
 	~	Euro/Year
+	~		|
+
+VA real=
+	VA/CPI
+	~	Euro constant/Year
 	~		|
 
 VA real estate=
@@ -29765,11 +30080,38 @@ Wellbeing indicators[wellbeing]=
 	~	Score
 	~		|
 
+Wellbeing indicators bottom 50[wellbeing]=
+	sum(Wellbeing indicators rq[regions!,quintiles!,wellbeing]*
+	bottom 50 rq[regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])/
+	sum(bottom 50 rq[regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])
+	~	Score
+	~		|
+
+Wellbeing indicators dec[deciles,wellbeing]=
+	sum(Wellbeing indicators rq[regions!,quintiles!,wellbeing]*
+	map rq dec[deciles,regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])/
+	sum(map rq dec[deciles,regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])
+	~	Score
+	~		|
+
 wellbeing indicators delay[regions,quintiles,wellbeing]= DELAY FIXED (
 	Wellbeing indicators rq[regions,quintiles,wellbeing], 1 , Initial wellbeing indicators
 [
 regions,quintiles,wellbeing])
 	~	
+	~		|
+
+Wellbeing indicators middle 40[wellbeing]=
+	sum(Wellbeing indicators rq[regions!,quintiles!,wellbeing]
+	*middle 40 rq[regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])/
+	sum(middle 40 rq[regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])
+	~	Score
 	~		|
 
 Wellbeing indicators r[regions,wellbeing]=
@@ -29795,6 +30137,15 @@ Wellbeing indicators rq[regions,quintiles,gini peer]=
 	gini peer rq[regions,quintiles] ~~|
 Wellbeing indicators rq[regions,quintiles,discrtime sq]=
 	discrtime sq rq[regions,quintiles]
+	~	Score
+	~		|
+
+Wellbeing indicators top 10[wellbeing]=
+	sum(Wellbeing indicators rq[regions!,quintiles!,wellbeing]
+	*top 10 rq[regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])/
+	sum(top 10 rq[regions!,quintiles!]
+	*num hhs delayed shares rq[regions!,quintiles!])
 	~	Score
 	~		|
 
@@ -30660,6 +31011,15 @@ yd real per capita top 10 pre tt=
 ,quintiles!])/
 	sum(pop rq[regions!,quintiles!]*top 10 rq[regions!,quintiles!])
 	~	Euro/(Year*Person)
+	~		|
+
+yd real shares dec[deciles]=
+	sum(yd hhs rq real[regions!,quintiles!]
+	*num hhs rq delayed[regions!,quintiles!]
+	*map rq dec[deciles,regions!,quintiles!])/
+	sum(yd hhs rq real[regions!,quintiles!]
+	*num hhs rq delayed[regions!,quintiles!])
+	~	Dmnl
 	~		|
 
 yd region[regions]=
@@ -31782,11 +32142,11 @@ Technology
 10,0,share imp gov i,3203,1257,75,30,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
 10,0,share imp Z ii,964,1927,75,30,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
 10,0,share imp hh i,3189,909,75,30,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
-10,0,inc tax rate 2,-45,2010,75,30,8,3,0,2,-1,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
-10,0,inc tax rate 3,-45,2040,75,30,8,3,0,2,-1,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
-10,0,inc tax rate 4,-43,2061,75,30,8,3,0,2,-1,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
-10,0,inc tax rate 5,-40,2077,75,30,8,3,0,2,-1,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
-10,0,inc tax rate 6,-40,2097,75,30,8,3,0,2,-1,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
+10,0,inc tax rate 2,-50,1970,75,30,8,3,0,2,-1,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
+10,0,inc tax rate 3,-48,2004,75,30,8,3,0,2,-1,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
+10,0,inc tax rate 4,-46,2043,75,30,8,3,0,2,-1,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
+10,0,inc tax rate 5,-48,2080,75,30,8,3,0,2,-1,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
+10,0,inc tax rate 6,-43,2126,75,30,8,3,0,2,-1,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
 10,0,ss rate employee,-1,2638,75,30,8,131,0,2,-1,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
 10,0,tax floor 2,-46,1839,75,30,8,3,0,2,-1,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
 10,0,tax floor 3,-45,1859,75,30,8,3,0,2,-1,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
@@ -31861,14 +32221,14 @@ Shocks
 1,0,CDF032C923503EA21AE7E4EF0CC57BA641BB7F82,C2453C79E303FA4BF285EAAE6C6E4E74E93F6760,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
 1,0,212E8C53928C53622215C269D625228FE76438C4,F8B561CBD4C203C3BEFE0448D49A1E98E037F3C7,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
 1,0,A4FE4585460F5A7E70A9284F387EE33A2C5ADA62,F8B561CBD4C203C3BEFE0448D49A1E98E037F3C7,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-10,0,S1 hours i,-186,1156,75,30,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|||128-64-0,0,0,0,0,0,0
-1,0,FAB91B5AA83AC81EE7EDC7B0680C272499983FE0,3CC9388C3CDAEA0CB37EC947D67A88232DD754F7,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,0,S1 hours i,-218,1167,75,30,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|||128-64-0,0,0,0,0,0,0
+1,0,48475276A29EA67CC8FBBF96013B34B988117038,3CC9388C3CDAEA0CB37EC947D67A88232DD754F7,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
 10,0,S Time Policy start,191,1213,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,CA80F094C1A1C3231468000F1227F315F495423C,3CC9388C3CDAEA0CB37EC947D67A88232DD754F7,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 10,0,S Time end,191,1182,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,20E481F4C78532E2FE35CC9E24628DCDC13B8D05,3CC9388C3CDAEA0CB37EC947D67A88232DD754F7,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
-10,0,S working hours,-200,1203,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,C2B6E2F7584BE1D1C0F5F69E0B12902C66E795C7,3CC9388C3CDAEA0CB37EC947D67A88232DD754F7,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,0,S working hours,-247,1213,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,7DC71A9DBC325ACF01853B54A1A71CD0ED296859,3CC9388C3CDAEA0CB37EC947D67A88232DD754F7,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 10,0,Time,221,1248,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,0B66928444F6F5F70CCE441F6CA6E4422F788123,3CC9388C3CDAEA0CB37EC947D67A88232DD754F7,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 10,0,S1 equity to liabilities ratio,551,1261,75,30,8,131,0,2,0,0,0,0,-1--1--1,0-0-0,|||128-64-0,0,0,0,0,0,0
@@ -31911,23 +32271,23 @@ Shocks
 10,0,S1 inc tax rate 4,-189,2065,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
 10,0,S1 inc tax rate 5,-184,2088,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
 10,0,S1 inc tax rate 6,-189,2109,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
-1,0,9A3D55BE287B3EB93103692CF8FC02FD49C4FD37,EC41D2CA1D341DB85D757012F0BABE243829F892,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,D44C9FBAE0EF3C87FE2584EB69FFDE873493A37D,557B73E15139E8BC65072D08B07EF67A3382BDC6,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,6DC8FB5D819A8B2CE3297CC9E0934652FBC413F1,9CBE9F00A86BA5958A987CA17F846E6F897F6D83,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,8EE6A7B2805A13C4BE1378ADA7C6DFF8118F22DC,0616CFB811A3FB6754B2CC4C0894727C6C13C354,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,9DC7847C199B4433F04BF8ED7EABC53C0BB52D1B,325FEB31D0129B27AE0850BC3F42CFEE6F2DA287,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,9A3D55BE287B3EB93103692CF8FC02FD49C4FD37,52986B87C5ED4FB8AC82861581A9343BFF393745,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,D44C9FBAE0EF3C87FE2584EB69FFDE873493A37D,EFC68E47D8513A77D01696EC124DE3B006103765,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,6DC8FB5D819A8B2CE3297CC9E0934652FBC413F1,FC5B513967953D67FF987BD86AEFE35F10040592,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,8EE6A7B2805A13C4BE1378ADA7C6DFF8118F22DC,0E22D5D3227D1FF90292808CA2F61D9D6166802C,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,9DC7847C199B4433F04BF8ED7EABC53C0BB52D1B,96C3F47835204F331B65F3E3382108EE4863D26B,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
 10,0,S Time Policy start,171,1955,75,30,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,1E87B6F891D045463DE4BB9F5002B091DCCE1C26,EC41D2CA1D341DB85D757012F0BABE243829F892,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,0,1E87B6F891D045463DE4BB9F5002B091DCCE1C26,52986B87C5ED4FB8AC82861581A9343BFF393745,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 10,0,Time,179,2046,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,8B30EA809E7769CF8B2AD36F61052EFE55322EC0,EC41D2CA1D341DB85D757012F0BABE243829F892,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
-1,0,8B30EA809E7769CF8B2AD36F61052EFE55322EC0,557B73E15139E8BC65072D08B07EF67A3382BDC6,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,8B30EA809E7769CF8B2AD36F61052EFE55322EC0,9CBE9F00A86BA5958A987CA17F846E6F897F6D83,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,8B30EA809E7769CF8B2AD36F61052EFE55322EC0,0616CFB811A3FB6754B2CC4C0894727C6C13C354,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,8B30EA809E7769CF8B2AD36F61052EFE55322EC0,325FEB31D0129B27AE0850BC3F42CFEE6F2DA287,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,1E87B6F891D045463DE4BB9F5002B091DCCE1C26,325FEB31D0129B27AE0850BC3F42CFEE6F2DA287,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,1E87B6F891D045463DE4BB9F5002B091DCCE1C26,0616CFB811A3FB6754B2CC4C0894727C6C13C354,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,1E87B6F891D045463DE4BB9F5002B091DCCE1C26,9CBE9F00A86BA5958A987CA17F846E6F897F6D83,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,1E87B6F891D045463DE4BB9F5002B091DCCE1C26,557B73E15139E8BC65072D08B07EF67A3382BDC6,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,8B30EA809E7769CF8B2AD36F61052EFE55322EC0,52986B87C5ED4FB8AC82861581A9343BFF393745,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,0,8B30EA809E7769CF8B2AD36F61052EFE55322EC0,EFC68E47D8513A77D01696EC124DE3B006103765,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,8B30EA809E7769CF8B2AD36F61052EFE55322EC0,FC5B513967953D67FF987BD86AEFE35F10040592,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,8B30EA809E7769CF8B2AD36F61052EFE55322EC0,0E22D5D3227D1FF90292808CA2F61D9D6166802C,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,8B30EA809E7769CF8B2AD36F61052EFE55322EC0,96C3F47835204F331B65F3E3382108EE4863D26B,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,1E87B6F891D045463DE4BB9F5002B091DCCE1C26,96C3F47835204F331B65F3E3382108EE4863D26B,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,1E87B6F891D045463DE4BB9F5002B091DCCE1C26,0E22D5D3227D1FF90292808CA2F61D9D6166802C,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,1E87B6F891D045463DE4BB9F5002B091DCCE1C26,FC5B513967953D67FF987BD86AEFE35F10040592,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,1E87B6F891D045463DE4BB9F5002B091DCCE1C26,EFC68E47D8513A77D01696EC124DE3B006103765,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
 10,0,S fintax,-343,2296,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,45A3275B0A45CEDEF5270E40BA229F2A67E582C9,6FE2A8EC8D6802AD7665C16856B236506DE0E896,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
 10,0,S Time Policy start,173,2382,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
@@ -31991,22 +32351,18 @@ Shocks
 1,0,BB702EE0297EACCAB8D86A057706DF263E0752D6,99CA3411FACCABEA491A8B6A5BE73935FA944163,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 10,0,Act WTR,-196,1121,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,865494A0DC54783974E00C4D7B60DC8BFD627F6C,3CC9388C3CDAEA0CB37EC947D67A88232DD754F7,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
-10,0,prog inc tax 2,-276,1991,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,prog inc tax 3,-304,2020,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,prog inc tax 4,-321,2049,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,prog inc tax 5,-335,2078,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,prog inc tax 6,-345,2106,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,BC84DCF8B207F70DCB23571A4A8DEFBD281FB7CB,EC41D2CA1D341DB85D757012F0BABE243829F892,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,89B034AA74FD3A61938C7C0710665AD27E46FBBA,557B73E15139E8BC65072D08B07EF67A3382BDC6,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,8CA73834318805A7372713CF02E08908BEE92AFE,9CBE9F00A86BA5958A987CA17F846E6F897F6D83,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,0E18DF68D145A44F9BBFD81BCC83A57B0DC1672E,0616CFB811A3FB6754B2CC4C0894727C6C13C354,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,27F370511280920F45ECB9CD287BD658D3B11698,325FEB31D0129B27AE0850BC3F42CFEE6F2DA287,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,8CA73834318805A7372713CF02E08908BEE92AFE,FC5B513967953D67FF987BD86AEFE35F10040592,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,0E18DF68D145A44F9BBFD81BCC83A57B0DC1672E,0E22D5D3227D1FF90292808CA2F61D9D6166802C,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,27F370511280920F45ECB9CD287BD658D3B11698,96C3F47835204F331B65F3E3382108EE4863D26B,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
 10,0,Act progressive Inc Tax,175,2127,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,A5DDC1D122A05705C825D73222ED0509431FB857,EC41D2CA1D341DB85D757012F0BABE243829F892,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,A5DDC1D122A05705C825D73222ED0509431FB857,557B73E15139E8BC65072D08B07EF67A3382BDC6,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,A5DDC1D122A05705C825D73222ED0509431FB857,9CBE9F00A86BA5958A987CA17F846E6F897F6D83,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,A5DDC1D122A05705C825D73222ED0509431FB857,0616CFB811A3FB6754B2CC4C0894727C6C13C354,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-1,0,A5DDC1D122A05705C825D73222ED0509431FB857,325FEB31D0129B27AE0850BC3F42CFEE6F2DA287,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,A5DDC1D122A05705C825D73222ED0509431FB857,52986B87C5ED4FB8AC82861581A9343BFF393745,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,A5DDC1D122A05705C825D73222ED0509431FB857,EFC68E47D8513A77D01696EC124DE3B006103765,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,A5DDC1D122A05705C825D73222ED0509431FB857,FC5B513967953D67FF987BD86AEFE35F10040592,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,A5DDC1D122A05705C825D73222ED0509431FB857,0E22D5D3227D1FF90292808CA2F61D9D6166802C,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+1,0,A5DDC1D122A05705C825D73222ED0509431FB857,96C3F47835204F331B65F3E3382108EE4863D26B,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
 10,0,Act focalized benefit,-1074,2229,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,Focalized benefit per capita,-1073,2165,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,2B6F4B8CB76E9F4D5E1D69B44F8941254F7FF7A2,99CA3411FACCABEA491A8B6A5BE73935FA944163,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
@@ -32518,6 +32874,11 @@ Population shares adjustment
 1,0,ECDB6D801182BDD02D635B917978E207A6C5033D,6FE2A8EC8D6802AD7665C16856B236506DE0E896,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
 12,0,0,-1383,1022,243,18,3,135,0,23,-1,0,0,0,0-255-255,0-0-0,||B|255-0-255,0,0,0,0,0,0
 Deciles
+10,0,GDP real,-169,939,47,12,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+10,0,prog inc tax 2,-276,1991,55,22,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,A56632298974FE0634CDF8C11C8D477A5DE3C9ED,52986B87C5ED4FB8AC82861581A9343BFF393745,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,0,prog inc tax 3,-304,2020,55,22,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,2A880FCC61D705293DD21724BC74DC86612EEF78,EFC68E47D8513A77D01696EC124DE3B006103765,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 \\\---/// Sketch information - do not modify anything except names
 V301  Do not put anything below this section - it will be ignored
 *inputs.demography_timeuse
@@ -32594,6 +32955,9 @@ Time Use
 1,0,BAC8EA8BC3885D54CCAE836720D56EF849576E83,3B2F4986E52412D268A1D2FCA5BB2BDE0ACE764A,1,0,0,0,0,192,0,-1--1--1,,1|(814,166)|
 10,0,skill share working age pop,1033,135,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,4CFF812201AA16BEFF6C87C40F2F79F32D6A7440,BAC8EA8BC3885D54CCAE836720D56EF849576E83,1,0,0,0,0,192,0,-1--1--1,,1|(938,166)|
+10,0,Act adjustment to labour constraints,1189,298,74,23,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,94B5DBD5E01A8691B7D9E127D0D2ED0B7471B0AD,BAC8EA8BC3885D54CCAE836720D56EF849576E83,1,0,0,0,0,192,0,-1--1--1,,1|(1136,241)|
+1,0,94B5DBD5E01A8691B7D9E127D0D2ED0B7471B0AD,09F7C7CBA975B3199E0660627E561738E24B8642,1,0,0,0,0,192,0,-1--1--1,,1|(1099,356)|
 \\\---/// Sketch information - do not modify anything except names
 V301  Do not put anything below this section - it will be ignored
 *inputs.environment
@@ -33450,6 +33814,8 @@ Re-skilling due to Job guarantee/emergency income
 1,0,3484BD618DC8F4D04744921067C7DF9829A309FE,B16699F76FBF16EADE98345FE7C056EBEC37C012,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
 10,0,threshold u,-768,415,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,D593F3468B069E4D62EB07EE3A3358D5A0BD0CF0,5BCC7C2CCE0BF1C1682CD3CAA14C508C823ED13F,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+10,0,Act adjustment to labour constraints,-781,721,74,23,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,E596B7C3CF7793FCCC06537EF8001375A0DB4F4E,5BCC7C2CCE0BF1C1682CD3CAA14C508C823ED13F,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
 \\\---/// Sketch information - do not modify anything except names
 V301  Do not put anything below this section - it will be ignored
 *2. Time use
@@ -34372,6 +34738,10 @@ $192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|96,96,5
 1,0,52CA7F5133768CE77C65D4D751FC86467AAF46F4,9E9A7F2E8CF53BF570D9A1D10B27385904928BDC,1,0,0,0,0,192,0,-1--1--1,,1|(1517,226)|
 10,0,Mixed income selfemp,1397,446,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,EFD705A4A7C5F9B58DE0F758E211485173005243,F484C25A5C37F3A8E98E276756BDBD86BE821AC8,1,0,0,0,0,192,0,-1--1--1,,1|(1480,429)|
+10,0,VA real,358,499,42,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,1636E86E31A90A6FD7E8A978FC21554599E2E341,6389931DF4571CB02CED471AAE3FF8DE6BE83C02,1,0,0,0,0,192,0,-1--1--1,,1|(374,455)|
+10,0,CPI,358,543,28,12,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,03AD398B81F17AD72C27E0762A1E74B9C5C07363,6389931DF4571CB02CED471AAE3FF8DE6BE83C02,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 \\\---/// Sketch information - do not modify anything except names
 V301  Do not put anything below this section - it will be ignored
 *6. Personal incomes
@@ -34659,7 +35029,6 @@ Mixed income
 1,0,160798654F64198F9BA3263CA6B46CC67979B44F,8820DDD2D5D2A983B574AAF9F5DBE5DC6A3D70A5,1,0,0,0,0,192,0,-1--1--1,,1|(1936,999)|
 1,0,37D852B75FC7A53BBE1D31AA98137D2691D7DE8E,8820DDD2D5D2A983B574AAF9F5DBE5DC6A3D70A5,1,0,0,0,0,192,0,-1--1--1,,1|(2011,946)|
 1,0,F60636491B094C584FB96E79EBAB1205997C42C7,40A153C0A40ED3B91D13767393D2309CB934EE91,1,0,0,0,0,192,0,-1--1--1,,1|(1875,502)|
-1,0,F60636491B094C584FB96E79EBAB1205997C42C7,089E97D9875C316B0BAAFED7786CB4173E53581B,1,0,0,0,0,192,0,-1--1--1,,1|(1946,549)|
 10,0,GFI per capita gs,1739,-383,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
 10,0,GFI per capita cap,1938,-322,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
 1,0,EC9CAE4CD1594FAC0895AC588618D8A3A77ADB08,9C61838990F2B7346FEE87022BA402A5BAF06AC6,1,0,0,0,0,192,0,-1--1--1,,1|(1837,-445)|
@@ -34750,6 +35119,7 @@ Inequality indicators
 1,0,E965E78ADB6A7DC09A7D49C72A3AE954888D9CEB,665632AB7980560B768A26557FFB6AB89FAF5779,1,0,0,0,0,192,0,-1--1--1,,1|(1144,128)|
 1,0,FEEB67C6DCF204118E049D71759E01B64922C703,C9AC229C01AE8F50F8D5089D310A8E0BF8D2D3A8,1,0,0,0,0,192,0,-1--1--1,,1|(814,331)|
 1,0,665632AB7980560B768A26557FFB6AB89FAF5779,C9AC229C01AE8F50F8D5089D310A8E0BF8D2D3A8,1,0,0,0,0,192,0,-1--1--1,,1|(912,439)|
+1,0,F60636491B094C584FB96E79EBAB1205997C42C7,089E97D9875C316B0BAAFED7786CB4173E53581B,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 \\\---/// Sketch information - do not modify anything except names
 V301  Do not put anything below this section - it will be ignored
 *7. Investments
@@ -36520,6 +36890,8 @@ We assume job guarantee income is not taxed! (see comments at JG module)
 1,0,9976D4AFCF6FE0CE0D227C1F978B166796EBB42A,6D11B99C19C2613C11811758C49DB15D28671AFF,1,0,0,0,0,192,0,-1--1--1,,1|(-243,563)|
 10,0,unemployment rate gs,-562,416,33,33,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
 1,0,D92BFBDC6B5EFBA86CD4F1417E3322EB66F8B5C1,FE601AE64B5295F9B3520BD9E53417BF300C476A,1,0,0,0,0,192,0,-1--1--1,,1|(-555,373)|
+10,0,Act adjustment to labour constraints,-2168,1121,74,23,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,29356CF148A989C992F9A408AA98177093993C70,62B541EFF549436499073CDAD4252A6C5234A5FE,1,0,0,0,0,192,0,-1--1--1,,1|(-2075,1081)|
 \\\---/// Sketch information - do not modify anything except names
 V301  Do not put anything below this section - it will be ignored
 *11. Government
@@ -36531,7 +36903,7 @@ Revenue
 10,0,corp tax i,1219,1789,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
 12,0,0,683,-641,541,23,3,7,0,21,-1,0,0,0,192-192-192,192-192-192,||I|0-0-0,0,0,0,0,0,0
 Expenditure
-10,0,gov def,211,188,75,30,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|||255-0-0,0,0,0,0,0,0
+10,0,gov def,204,235,75,30,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|||255-0-0,0,0,0,0,0,0
 10,0,b,277,437,35,17,3,3,0,0,0,0,0,0,0,0,0,0,0,0
 12,0,0,243,828,213,21,3,7,0,21,-1,0,0,0,192-192-192,192-192-192,||I|0-0-0,0,0,0,0,0,0
 Central Bank
@@ -36576,8 +36948,8 @@ Central Bank
 10,0,I gov,675,-109,75,30,8,3,0,16,0,0,0,0,-1--1--1,0-0-0,||B|0-0-0,0,0,0,0,0,0
 1,0,A6AA3B711F9F117EAE52E5E39FE163FF8F74EB52,08F4F621EF05BCEE58A4B4928256BDDE3D7B544D,1,0,0,0,0,64,0,-1--1--1,,1|(509,-83)|
 1,0,D3E42BD24C85F57B61583E2C646CA135CF04027A,08F4F621EF05BCEE58A4B4928256BDDE3D7B544D,1,0,0,0,0,64,0,-1--1--1,,1|(361,-73)|
-1,0,1C2EF0506C67400626C8DE734197475C05CDFB27,54023FBFEE23613120D2F22096BDAE4AB17039E0,1,0,0,0,0,64,0,-1--1--1,,1|(221,86)|
-1,0,54023FBFEE23613120D2F22096BDAE4AB17039E0,0C63C4783C1214ACF4063E5ABC74865A2E5F3188,1,0,0,0,0,64,0,-1--1--1,,1|(281,312)|
+1,0,1C2EF0506C67400626C8DE734197475C05CDFB27,AEBAD3FCEB865EC0B9C8433BA8316365A0F0D618,1,0,0,0,0,64,0,-1--1--1,,1|(221,117)|
+1,0,AEBAD3FCEB865EC0B9C8433BA8316365A0F0D618,0C63C4783C1214ACF4063E5ABC74865A2E5F3188,1,0,0,0,0,64,0,-1--1--1,,1|(273,329)|
 10,0,gov interest,356,205,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
 1,0,C58102385BA166307564E61A113A6A916908CCB2,08F4F621EF05BCEE58A4B4928256BDDE3D7B544D,1,0,0,0,0,64,0,-1--1--1,,1|(361,107)|
 10,0,sens i,456,893,75,30,8,3,0,2,-1,0,0,0,-1--1--1,0-0-0,|||0-128-0,0,0,0,0,0,0
@@ -36630,12 +37002,12 @@ Central Bank
 1,0,997D71C0CA9E8020AE8B7827A82396C854AE1750,BAEBE1A1D97B806B661A90B7116E24DB86254B3D,1,0,0,0,0,64,0,-1--1--1,,1|(828,-178)|
 10,0,def gdp,15,436,75,30,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|||0-128-255,0,0,0,0,0,0
 1,0,ED02F16E25EC6F56AB6112D8B1839E1F123F4D59,9B2094D5BBB6B59337C60FE30A916A9052C46E1D,1,0,0,0,0,64,0,-1--1--1,,1|(-8,589)|
-1,0,54023FBFEE23613120D2F22096BDAE4AB17039E0,9B2094D5BBB6B59337C60FE30A916A9052C46E1D,1,0,0,0,0,64,0,-1--1--1,,1|(147,381)|
+1,0,AEBAD3FCEB865EC0B9C8433BA8316365A0F0D618,9B2094D5BBB6B59337C60FE30A916A9052C46E1D,1,0,0,0,0,64,0,-1--1--1,,1|(136,394)|
 10,0,debt gdp,162,633,75,30,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|||0-128-255,0,0,0,0,0,0
 1,0,0C63C4783C1214ACF4063E5ABC74865A2E5F3188,97EF0476C06577A777250BFD8DA2BAD2073817B1,1,0,0,0,0,64,0,-1--1--1,,1|(271,582)|
 10,0,GDP nom,49,686,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,ED02F16E25EC6F56AB6112D8B1839E1F123F4D59,97EF0476C06577A777250BFD8DA2BAD2073817B1,1,0,0,0,0,64,0,-1--1--1,,1|(112,680)|
-1,0,08F4F621EF05BCEE58A4B4928256BDDE3D7B544D,54023FBFEE23613120D2F22096BDAE4AB17039E0,1,0,0,0,0,128,0,-1--1--1,,1|(268,144)|
+1,0,08F4F621EF05BCEE58A4B4928256BDDE3D7B544D,AEBAD3FCEB865EC0B9C8433BA8316365A0F0D618,1,0,0,0,0,128,0,-1--1--1,,1|(267,179)|
 10,0,adaptation exp,203,-280,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
 1,0,8E9010E3D4BE7FCF67279513BF69069BFB4E5AF8,08F4F621EF05BCEE58A4B4928256BDDE3D7B544D,1,0,0,0,0,128,0,-1--1--1,,1|(233,-137)|
 10,0,Act adapt,196,-410,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
@@ -37436,6 +37808,14 @@ Pension payments
 1,0,32078BA0973246FBC5EF1F24C58A673894045542,7A848B8B3DACFCA80A9797F8489BE494BA67DF1E,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 10,0,deficit to GDP,180,432,35,35,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
 1,0,9B2094D5BBB6B59337C60FE30A916A9052C46E1D,8D66870AEABC1A9E3CB4CDFE42B8FB9E219CD703,1,0,0,0,0,192,0,-1--1--1,,1|(118,449)|
+10,0,b real,470,469,42,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,0C63C4783C1214ACF4063E5ABC74865A2E5F3188,4ECA52B5E81BE127F12C67CD46910E307A8A1089,1,0,0,0,0,192,0,-1--1--1,,1|(400,415)|
+10,0,CPI delay,461,595,50,12,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,1D27535AEEEFA857B1BFB7D1E5585F31B866348D,4ECA52B5E81BE127F12C67CD46910E307A8A1089,1,0,0,0,0,192,0,-1--1--1,,1|(426,540)|
+10,0,tot gov rev real,259,72,58,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,CPI,256,131,28,12,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,2AE8C16935C75AFE9657CFA831B8F39DE732F1B0,CA52E98CA4A9202043819B2A87B0D0A9457490DA,1,0,0,0,0,192,0,-1--1--1,,1|(283,111)|
+1,0,1C2EF0506C67400626C8DE734197475C05CDFB27,CA52E98CA4A9202043819B2A87B0D0A9457490DA,1,0,0,0,0,192,0,-1--1--1,,1|(230,24)|
 \\\---/// Sketch information - do not modify anything except names
 V301  Do not put anything below this section - it will be ignored
 *12. Technology
@@ -39705,6 +40085,12 @@ Also affects only change not overall damage
 1,0,94D5DA5669116796E173E8CD886934E2AC2F313C,FA3783DF98EA704C27F314CE7F6D87038594D5CA,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 10,0,S Time Policy start,723,227,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,3307D087531446390B0B8BF05C1EFA4FD655DE51,A3BC7E276CEA25D0B3F988A3B2CAFD9FD48AD55C,1,0,0,0,0,64,0,-1--1--1,,1|(760,264)|
+10,0,CPI delay,682,417,50,12,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,9661ACE78EE8736E5D7A27725522EA8C8325595F,B4BB633E58212A338623756CECD8801F9C999E23,1,0,0,0,0,192,0,-1--1--1,,1|(764,433)|
+10,0,carbon tax rate real,1296,440,57,23,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,B4BB633E58212A338623756CECD8801F9C999E23,19F26B897103CE7675F746FF26C66AB50AB17EFA,1,0,0,0,0,192,0,-1--1--1,,1|(1099,391)|
+10,0,CPI delay,1335,532,50,12,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,0DFBD63B9848277CAECA3330B7B9E4D1B8DD0FCB,19F26B897103CE7675F746FF26C66AB50AB17EFA,1,0,0,0,0,192,0,-1--1--1,,1|(1300,496)|
 \\\---/// Sketch information - do not modify anything except names
 V301  Do not put anything below this section - it will be ignored
 *16. Policies
@@ -39787,11 +40173,11 @@ Key Paramenters (random forest)
 10,0,Act BI,1125,79,33,33,6,131,0,28,0,0,0,0,-1--1--1,192-128-192,|14|B|128-0-64,0,0,0,0,0,0
 10,0,Act progressive Inc Tax,1148,294,41,41,6,131,0,28,0,0,0,0,-1--1--1,192-128-192,|14|B|0-0-0,0,0,0,0,0,0
 10,0,BI per capita,1360,76,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
-10,0,prog inc tax 2,1257,279,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
-10,0,prog inc tax 3,1256,296,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
-10,0,prog inc tax 4,1253,314,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
-10,0,prog inc tax 5,1331,281,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
-10,0,prog inc tax 6,1326,296,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,0,prog inc tax 2,1259,259,39,12,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,0,prog inc tax 3,1257,294,39,12,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,0,prog inc tax 4,1262,330,39,12,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,0,prog inc tax 5,1382,266,39,12,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,0,prog inc tax 6,1385,314,39,12,8,3,0,0,0,0,0,0,0,0,0,0,0,0
 10,0,S fintax,1235,550,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,Div rate,1354,621,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 12,0,0,1557,277,51,33,3,135,0,6,-1,0,0,0,-1--1--1,0-64-0,|||255-255-255,0,0,0,0,0,0
@@ -40102,6 +40488,9 @@ Reaction to labour constraints
 1,0,46D105B42797395E99F615E3240413DCC2D884CF,652A2E8FE93DDE3A1667A03BC16753DEBA3C74D3,1,0,0,0,0,64,0,-1--1--1,,1|(502,1092)|
 1,0,470009DEABA3560F482C60712D41EE76EB699DF2,652A2E8FE93DDE3A1667A03BC16753DEBA3C74D3,1,0,0,0,0,64,0,-1--1--1,,1|(494,970)|
 10,0,final threshold progressive CT,845,83,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,Act adjustment to labour constraints,1975,698,68,23,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,exports electrification switch,511,648,51,33,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,84B82D9516DEA754D73BFA3D9081A91564188B84,F2249864333112FD80878BDB25D3F999B7C9E9DA,1,0,0,0,0,192,0,-1--1--1,,1|(586,646)|
 \\\---/// Sketch information - do not modify anything except names
 V301  Do not put anything below this section - it will be ignored
 *17. Main indicators
@@ -40175,11 +40564,11 @@ Gini decomposition
 10,0,VA macro industry,623,-17,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,seed,709,-145,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,sens prob,742,-207,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,per capita GDP real,381,-304,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
-10,0,population total,270,-194,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,BFFB72E6541D529FBEA653AC51354886CA3430E4,E6D6943E6151A6DF6AA06A83CEBA7F0260DD0019,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
-10,0,People 1,367,-174,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,C93CB3BA83E7CDB71E4D79319CC95FF79C2A667B,E6D6943E6151A6DF6AA06A83CEBA7F0260DD0019,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,0,per capita GDP real,346,-153,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,0,population total,235,-43,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,402D1574C80ACAD5151CB15E432DA2ECE2D2C018,849FE4C2C383FE3B7B7497FEE003D0B06D80916C,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,0,People 1,332,-23,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,F3F3B6C34DF7B97E76F6640AE9FD8409F80AC9A7,849FE4C2C383FE3B7B7497FEE003D0B06D80916C,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 10,0,Active Social Policies,661,-674,75,30,8,3,0,4,-1,0,0,0,-1--1--1,255-128-64,|||0-0-0,0,0,0,0,0,0
 10,0,Act adapt,664,-602,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,Act BI,664,-602,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
@@ -40277,15 +40666,15 @@ Gini decomposition
 1,0,91B3A11CFC1ECC71ED724076EB538B3884B7389D,A19C301AB3A8E1272184129BA3C764406E20AE9F,1,0,0,0,0,64,0,-1--1--1,,1|(646,708)|
 10,0,gini WB,348,-399,75,30,8,3,0,4,-1,0,0,0,-1--1--1,255-192-128,|||0-0-0,0,0,0,0,0,0
 10,0,yd hh gini,752,-480,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,GDP real,706,548,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,25522543E8D37B404A7792809885AF922D2755DB,D237209F61A1DD5BEF6F98B14E68F4BBA9497A2F,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,0,GDP real,706,548,75,22,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,12AD81CD8D1DC031AAB2719FDF2B936CDDA544E5,D237209F61A1DD5BEF6F98B14E68F4BBA9497A2F,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 10,0,GDP real,956,-81,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,2B100B6150C87CBE0E4185E394032194D4990A2B,2DE952B1FF2B1D90BF23D95E254C670C708153D8,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 1,0,2B100B6150C87CBE0E4185E394032194D4990A2B,1A47F160F98AE92DA3F7849DED207392DC44D2F1,1,0,0,0,0,192,0,-1--1--1,,1|(993,-14)|
 1,0,2B100B6150C87CBE0E4185E394032194D4990A2B,AFF958F9DE4BA04FCD61D84048905C9C42922D91,0,0,0,0,0,192,1,-1--1--1,,1|(0,0)|
-1,0,25522543E8D37B404A7792809885AF922D2755DB,1380186F1D0DB59D0B6CE1E6DF4DFBBE180EAE41,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
-10,0,GDP real,478,-222,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,36EBDA11B578ED2F087E0C60B5C346D10E3C1D7A,E6D6943E6151A6DF6AA06A83CEBA7F0260DD0019,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,0,12AD81CD8D1DC031AAB2719FDF2B936CDDA544E5,1380186F1D0DB59D0B6CE1E6DF4DFBBE180EAE41,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+10,0,GDP real,443,-71,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,8E17E4FFD24586A0066D44EFD0553D7A9BBE3575,849FE4C2C383FE3B7B7497FEE003D0B06D80916C,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 10,0,total gov c nom,110,-430,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,c tot pp,103,-352,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,I demand nom,104,-278,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
@@ -40378,7 +40767,7 @@ Structural
 10,0,gini wage,-146,976,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,ratio K FE constrained fd,-530,852,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,factor FE constraint,-537,905,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,total trade balance nom,410,-101,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+10,0,total trade balance nom,375,50,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,GWB,279,-494,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,yd rq total,282,-532,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,GFI rq total,1280,-408,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
@@ -40485,6 +40874,14 @@ Structural
 1,0,C5068245F27451B332688979D7C6966FC17AE978,A11788A4951DF3568D348E4D5FE24D12B0531B95,1,0,0,0,0,192,0,-1--1--1,,1|(1562,826)|
 1,0,EF9B693D02379D5683001370410572CF02A504CB,1E3A9076CF00518F97292BF605477DEADD656D70,1,0,0,0,0,192,0,-1--1--1,,1|(1778,392)|
 1,0,EF9B693D02379D5683001370410572CF02A504CB,895A9B2994813AD58618255D3F43FEB71D652611,1,0,0,0,0,192,0,-1--1--1,,1|(1828,501)|
+10,0,init per capita GDP real,483,-197,52,23,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,g GDP per capita real,346,-327,42,23,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,per capita GDP real delay,355,-241,60,23,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,849FE4C2C383FE3B7B7497FEE003D0B06D80916C,6AF23BD54C793F6F0D93939218E5284D8A18D838,1,0,0,0,0,192,1,-1--1--1,,1|(429,-142)|
+1,0,849FE4C2C383FE3B7B7497FEE003D0B06D80916C,986B041C702C2FF488FC1BB4FF2AA281F996E6A7,1,0,0,0,0,192,0,-1--1--1,,1|(319,-186)|
+1,0,986B041C702C2FF488FC1BB4FF2AA281F996E6A7,79A954FA667F6FAD73161551563AEC5E9ABBFA55,1,0,0,0,0,192,0,-1--1--1,,1|(316,-275)|
+1,0,849FE4C2C383FE3B7B7497FEE003D0B06D80916C,79A954FA667F6FAD73161551563AEC5E9ABBFA55,1,0,0,0,0,192,0,-1--1--1,,1|(254,-278)|
+1,0,6AF23BD54C793F6F0D93939218E5284D8A18D838,986B041C702C2FF488FC1BB4FF2AA281F996E6A7,1,0,0,0,0,192,1,-1--1--1,,1|(442,-246)|
 \\\---/// Sketch information - do not modify anything except names
 V301  Do not put anything below this section - it will be ignored
 *18. Households and consumption
@@ -41196,8 +41593,8 @@ this ppi for impact on beta, the pp after elec for inflation, CPI measures
 10,0,activated c19 inv shocks,-1654,1970,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,04E98B74F19AD16804A1F2A674D372CB51B39672,01AC34227AF9F66D5F31037FC857F66B0876678B,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 10,0,NFI rq,-1884,2204,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,init NFI hhs rq,-1333,623,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
-1,0,BA1BEF99C89AACCAB770338AFEEABD8ADB58B5AC,3E141CA96455504733AC38BB04B66334F549D8CA,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+10,0,init NFI hhs rq,-1204,673,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,BA1BEF99C89AACCAB770338AFEEABD8ADB58B5AC,901AC411CBF69BF1D88345746F51C7D0673E587C,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
 10,0,initial NFI rq,-1026,-347,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
 1,0,BE05BDF9B9ED48D844FAE7D05FE2840664C31476,1BA18C1A57AA34063604F80310007B5B8A92AFB3,0,0,0,0,0,192,1,-1--1--1,,1|(0,0)|
 10,0,NPB rq,-1439,-270,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
@@ -41496,8 +41893,8 @@ this ppi for impact on beta, the pp after elec for inflation, CPI measures
 10,0,adult pop rq,-1962,1042,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
 1,0,3F28BFDD0F4CA15F1AC3E615A24E6107CC5EFC4A,18B8931A442E22C1505F3C1F0DB6BE627BC5D38D,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
 1,0,DE589A64DB833BCEFD73ED5B8C046A9CD9DDB756,18B8931A442E22C1505F3C1F0DB6BE627BC5D38D,1,0,0,0,0,192,0,-1--1--1,,1|(-2092,1022)|
-10,0,avg yd hhs pre hh tax,-1382,238,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
-1,0,4A19013F348D32CB70B2FC49D7870ED9A5C27EC9,7536BF60B97B98A95A2271460E5BEB672054758A,1,0,0,0,0,192,0,-1--1--1,,1|(-1457,178)|
+10,0,avg yd hhs pre hh tax,-1346,176,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,4A19013F348D32CB70B2FC49D7870ED9A5C27EC9,B1AA6616ADCB3DF111A7FAAB812796A4A1A861B2,1,0,0,0,0,192,0,-1--1--1,,1|(-1440,140)|
 10,0,num hhs delayed shares rq,2208,94,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,relative poverty line pre hh tax,1715,334,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
 10,0,hhs in poverty pre hh tax rq,1873,223,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
@@ -41535,8 +41932,8 @@ Income cap and redistribution policies
 1,0,373DB3E4AA437E28F7FDFD745A943C16326EDE25,194760689DB9A011FC9776E47803FBF6AFB0DEDE,1,0,0,0,0,192,0,-1--1--1,,1|(-230,2011)|
 1,0,AA44BEC25E68A06D522D51FE1A5ACA27184B6C1B,0B1FF707D935C05A1FB83ADB8629D03ADBB7C0D6,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
 1,0,373DB3E4AA437E28F7FDFD745A943C16326EDE25,AB3CFCE798595784D529610AE9617CFEC5E58E77,1,0,0,0,0,192,0,-1--1--1,,1|(-206,2186)|
-10,0,num hhs delayed shares rq,-1100,235,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,9978AD16D6B121FEF50148176653E8D0424E98E8,7536BF60B97B98A95A2271460E5BEB672054758A,1,0,0,0,0,192,0,-1--1--1,,1|(-1245,178)|
+10,0,num hhs delayed shares rq,-1085,218,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,497676ABD9DF5BD82EF21B578A5A13BC7ED0ED50,B1AA6616ADCB3DF111A7FAAB812796A4A1A861B2,1,0,0,0,0,192,0,-1--1--1,,1|(-1209,139)|
 10,0,num hhs delayed shares rq,1851,388,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,BFB5E4E5DD2A3D6967BE96C8264A726349E2DF05,F368BC4A6D988E4710BC597C98FF8B676D0D79E2,1,0,0,0,0,64,0,-1--1--1,,1|(1781,375)|
 10,0,num hhs rq delayed,1558,100,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
@@ -41577,10 +41974,10 @@ Income cap and redistribution policies
 1,0,4A2D3992378A41FF301B0A945ECA0DC1820CFEFA,9FB3264B42DE15F8C5C10CC2BFA21501EE0BFA0D,1,0,0,0,0,192,0,-1--1--1,,1|(2329,263)|
 1,0,366334B547E9EE7F8B77986FE873868535D13606,EDF4B4097448E4AC98A353F29A1E49399EB2C3A2,1,0,0,0,0,192,0,-1--1--1,,1|(2334,233)|
 1,0,32A3B8E7F54B90A890FBA7C6A92EB16D756ACA0D,EDF4B4097448E4AC98A353F29A1E49399EB2C3A2,1,0,0,0,0,192,0,-1--1--1,,1|(2516,453)|
-10,0,yd hhs rq real,-1479,529,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
-10,0,CPI rq,-1216,442,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,F7218CE7C3BB250052A6E4D36CBB84D2709210B0,BCCB2225BAB89B5BAE84B8571F5CF6C6D8B76D49,1,0,0,0,0,192,0,-1--1--1,,1|(-1314,507)|
-1,0,CA00F0410C02384023DBCF2E350A2B1C81A32D1C,BCCB2225BAB89B5BAE84B8571F5CF6C6D8B76D49,1,0,0,0,0,192,0,-1--1--1,,1|(-1532,448)|
+10,0,yd hhs rq real,-1468,482,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,CPI rq,-1191,367,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,BDD794330678D9DD99AEC4EB18E7CEEF3285F797,F4761092E967C79CDDF4F6EAA43E9334E8B9BAA7,1,0,0,0,0,192,0,-1--1--1,,1|(-1286,441)|
+1,0,CA00F0410C02384023DBCF2E350A2B1C81A32D1C,F4761092E967C79CDDF4F6EAA43E9334E8B9BAA7,1,0,0,0,0,192,0,-1--1--1,,1|(-1526,429)|
 10,0,yd hhs change after hh taxes rq,-2895,395,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
 10,0,total savings checl,-2748,2155,75,30,8,3,0,2,-1,0,0,0,-1--1--1,0-0-0,|||255-0-0,0,0,0,0,0,0
 1,0,77A41F0F9DF7C59FF5BF864CED0A8864C2D108BC,477F3A844F6934EC13228C9F1971AF718F76F8B0,1,0,0,0,0,192,0,-1--1--1,,1|(-2747,2093)|
@@ -41745,10 +42142,10 @@ Household poverty and inequality indices
 1,0,445E3E9865F94D158423A2DFF8F10E408FB72A2B,2675E2C321FD1AFC0DA2B364A3971FA97F787AF9,1,0,0,0,0,64,0,-1--1--1,,1|(-309,852)|
 10,0,CPI,-2445,-681,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,C2BE6EB4C8FDA9C31C15D63A75D91339F3ED3C79,7F62B5BEADF946AEC7D7D6FA1A61FBEAC0DB321D,1,0,0,0,0,64,0,-1--1--1,,1|(-2361,-638)|
-10,0,mean yd hhs real,-1206,523,36,36,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
-1,0,BCCB2225BAB89B5BAE84B8571F5CF6C6D8B76D49,6925E0992B817B8EBAB38E2280B76C7F6D1A164B,1,0,0,0,0,192,0,-1--1--1,,1|(-1334,560)|
-10,0,num hhs delayed shares rq,-1058,452,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,06788682AE73CA748A33C6303B8D0172514D31BA,6925E0992B817B8EBAB38E2280B76C7F6D1A164B,1,0,0,0,0,192,0,-1--1--1,,1|(-1137,515)|
+10,0,mean yd hhs real,-1079,457,36,36,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,F4761092E967C79CDDF4F6EAA43E9334E8B9BAA7,1147598D776EEF46A832552052DB6AA254895881,1,0,0,0,0,192,0,-1--1--1,,1|(-1234,481)|
+10,0,num hhs delayed shares rq,-1210,505,47,26,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,BB2D8F996321A4AE2125FD56D87730ABF85E4086,1147598D776EEF46A832552052DB6AA254895881,1,0,0,0,0,192,0,-1--1--1,,1|(-1122,491)|
 10,0,mean yd hhs real,-2211,438,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,yd hh gini,-2210,500,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,mean yd d real,-2361,438,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
@@ -41758,13 +42155,13 @@ Household poverty and inequality indices
 1,0,1A25776CB275C3E33380557EDA569D9CC6B80A63,1ECB2AA43DB15D33E1C27A582EEB3CC2901103EA,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
 10,0,yd national real per person,-2497,443,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,GINI yd,-2350,503,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,yd rq real per capita,-1403,461,40,40,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
-10,0,num hhs rq delayed,-1139,338,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+10,0,yd rq real per capita,-1365,404,27,27,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,num hhs rq delayed,-1146,291,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,pop rq,-1479,381,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,CA00F0410C02384023DBCF2E350A2B1C81A32D1C,561FC6D89FAFC00320B1869C81F8D61550676489,1,0,0,0,0,192,0,-1--1--1,,1|(-1479,420)|
-1,0,2961B22C1F48B231EE494D717F58D134CBCC8DC0,561FC6D89FAFC00320B1869C81F8D61550676489,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
-1,0,F7218CE7C3BB250052A6E4D36CBB84D2709210B0,561FC6D89FAFC00320B1869C81F8D61550676489,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
-1,0,892134959DF4A1399ECFE84A9AF9CD21AFF93198,561FC6D89FAFC00320B1869C81F8D61550676489,1,0,0,0,0,192,0,-1--1--1,,1|(-1267,378)|
+1,0,CA00F0410C02384023DBCF2E350A2B1C81A32D1C,C9E0D13EFB236F280A9DAA058628C175B8943C50,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,2961B22C1F48B231EE494D717F58D134CBCC8DC0,C9E0D13EFB236F280A9DAA058628C175B8943C50,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,BDD794330678D9DD99AEC4EB18E7CEEF3285F797,C9E0D13EFB236F280A9DAA058628C175B8943C50,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,AFAD992B748D8507DB1DC4DA7070980100003FFF,C9E0D13EFB236F280A9DAA058628C175B8943C50,1,0,0,0,0,192,0,-1--1--1,,1|(-1248,334)|
 10,0,Palma ratio region,1818,976,36,36,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
 1,0,7D830B40202D2E5AA1177F3B208C018ABC345F15,EA617BE2D3F81008392F437BB07E8B6AA0FA884D,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
 10,0,hhs members init,-2198,1312,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
@@ -41785,21 +42182,21 @@ Household poverty and inequality indices
 1,0,2E8BD5622B407C1FD535C5EA0B162DA76BF492CD,65FCA6987C22E3772BAB540BC16F4FA31B23464F,1,0,0,0,0,192,1,-1--1--1,,1|(1704,980)|
 10,0,WB beta aids,-947,2235,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,96D1D1F239FFCDC815C3C3E27572FE6FDC89CD90,DDDF63FC8D5261577E5D0B4F94F24D3966DD2FEC,1,0,0,0,0,64,0,-1--1--1,,1|(-881,2306)|
-10,0,mean yd r real per capita,-1376,385,38,38,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
-1,0,CA00F0410C02384023DBCF2E350A2B1C81A32D1C,AB7AC4D59EED9F45149468DF46D65B8B450CB510,1,0,0,0,0,192,0,-1--1--1,,1|(-1489,350)|
-1,0,2961B22C1F48B231EE494D717F58D134CBCC8DC0,AB7AC4D59EED9F45149468DF46D65B8B450CB510,1,0,0,0,0,192,0,-1--1--1,,1|(-1450,375)|
-1,0,892134959DF4A1399ECFE84A9AF9CD21AFF93198,AB7AC4D59EED9F45149468DF46D65B8B450CB510,1,0,0,0,0,192,0,-1--1--1,,1|(-1261,342)|
-1,0,F7218CE7C3BB250052A6E4D36CBB84D2709210B0,AB7AC4D59EED9F45149468DF46D65B8B450CB510,1,0,0,0,0,192,0,-1--1--1,,1|(-1264,403)|
+10,0,mean yd r real per capita,-1365,341,27,27,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,CA00F0410C02384023DBCF2E350A2B1C81A32D1C,3AD21C64A62966FB19772725C275494603363E11,1,0,0,0,0,192,0,-1--1--1,,1|(-1490,332)|
+1,0,2961B22C1F48B231EE494D717F58D134CBCC8DC0,3AD21C64A62966FB19772725C275494603363E11,1,0,0,0,0,192,0,-1--1--1,,1|(-1448,361)|
+1,0,AFAD992B748D8507DB1DC4DA7070980100003FFF,3AD21C64A62966FB19772725C275494603363E11,1,0,0,0,0,192,0,-1--1--1,,1|(-1259,301)|
+1,0,BDD794330678D9DD99AEC4EB18E7CEEF3285F797,3AD21C64A62966FB19772725C275494603363E11,1,0,0,0,0,192,0,-1--1--1,,1|(-1248,339)|
 10,0,Act Wellbeing Module,-1017,2502,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,BEDA15D78C6A9DA83196797BD38E0D7339D61F8E,DDDF63FC8D5261577E5D0B4F94F24D3966DD2FEC,1,0,0,0,0,192,0,-1--1--1,,1|(-919,2487)|
 10,0,init yd hhs rq,-980,1968,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,F058FF9AD35AD63969E204739BC1E3FA8222483E,EB6D2BEECA3BC888A73E1416C49F30D023A7BF8C,1,0,0,0,0,192,1,-1--1--1,,1|(-1073,1981)|
 1,0,9F6542D603AD5522A6418258678BD4DECF828C35,EB6D2BEECA3BC888A73E1416C49F30D023A7BF8C,1,0,0,0,0,192,1,-1--1--1,,1|(-1207,1721)|
-10,0,mean yd real per capita,-1337,314,37,37,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
-1,0,CA00F0410C02384023DBCF2E350A2B1C81A32D1C,C329C0383D2D4C7F5A7F3EEDEEAFB6DA5E148406,1,0,0,0,0,192,0,-1--1--1,,1|(-1464,315)|
-1,0,892134959DF4A1399ECFE84A9AF9CD21AFF93198,C329C0383D2D4C7F5A7F3EEDEEAFB6DA5E148406,1,0,0,0,0,192,0,-1--1--1,,1|(-1233,312)|
-1,0,2961B22C1F48B231EE494D717F58D134CBCC8DC0,C329C0383D2D4C7F5A7F3EEDEEAFB6DA5E148406,1,0,0,0,0,192,0,-1--1--1,,1|(-1435,323)|
-1,0,F7218CE7C3BB250052A6E4D36CBB84D2709210B0,C329C0383D2D4C7F5A7F3EEDEEAFB6DA5E148406,1,0,0,0,0,192,0,-1--1--1,,1|(-1250,343)|
+10,0,mean yd real per capita,-1365,280,27,27,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,CA00F0410C02384023DBCF2E350A2B1C81A32D1C,562D7320B42BA11501DFF8BF9CE7960E5D53AD7A,1,0,0,0,0,192,0,-1--1--1,,1|(-1480,304)|
+1,0,AFAD992B748D8507DB1DC4DA7070980100003FFF,562D7320B42BA11501DFF8BF9CE7960E5D53AD7A,1,0,0,0,0,192,0,-1--1--1,,1|(-1251,271)|
+1,0,2961B22C1F48B231EE494D717F58D134CBCC8DC0,562D7320B42BA11501DFF8BF9CE7960E5D53AD7A,1,0,0,0,0,192,0,-1--1--1,,1|(-1452,316)|
+1,0,BDD794330678D9DD99AEC4EB18E7CEEF3285F797,562D7320B42BA11501DFF8BF9CE7960E5D53AD7A,1,0,0,0,0,192,0,-1--1--1,,1|(-1264,278)|
 10,0,CPI,-919,332,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 10,0,c hhs shares pp dec p,-1806,4353,32,32,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
 10,0,c hhs shares pp top10 p,-1768,4403,31,31,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
@@ -41959,6 +42356,27 @@ Household poverty and inequality indices
 10,0,ratio K FE constrained fd,-328,3873,65,22,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,4412513B4C2C18DB72A989E27F90264DA396992F,9E30F3B9FB3F720195B1DB2F2DFC8F003F2E072A,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 1,0,AB3CFCE798595784D529610AE9617CFEC5E58E77,DDDF63FC8D5261577E5D0B4F94F24D3966DD2FEC,1,0,0,0,0,192,0,-1--1--1,,1|(-555,2325)|
+10,0,c pp shares dec,-1513,3726,35,35,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,E3423AA94DFBB80EB0C049C7FE1DCA5A7DBCF8DE,738C7DACE059C047BCDF2C8E54124135ABFCDACE,1,0,0,0,0,192,0,-1--1--1,,1|(-1622,3866)|
+10,0,map rq dec,-1627,3696,55,12,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,69294448FBFA74FC0464BCEB6AF231FB2250384B,738C7DACE059C047BCDF2C8E54124135ABFCDACE,1,0,0,0,0,192,0,-1--1--1,,1|(-1555,3694)|
+10,0,mean yd hhs real bottom 40,-1079,560,56,23,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,map rq dec,-1506,691,55,12,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+10,0,bottom 40 rq,-1200,577,42,22,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,deciles rq,-1333,552,53,12,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,4CA151FDEAB45655F32F4499E2280DAA3960A8A1,151B06860C0562227DF50675D7400CEAB881A4B0,1,0,0,0,0,64,0,-1--1--1,,1|(-1263,571)|
+1,0,151B06860C0562227DF50675D7400CEAB881A4B0,A6577D595D616C2E0D84F25CCA3DE4CF36B47796,1,0,0,0,0,192,0,-1--1--1,,1|(-1153,588)|
+1,0,BB2D8F996321A4AE2125FD56D87730ABF85E4086,A6577D595D616C2E0D84F25CCA3DE4CF36B47796,1,0,0,0,0,64,0,-1--1--1,,1|(-1131,524)|
+1,0,F4761092E967C79CDDF4F6EAA43E9334E8B9BAA7,A6577D595D616C2E0D84F25CCA3DE4CF36B47796,1,0,0,0,0,64,0,-1--1--1,,1|(-1228,547)|
+10,0,bottom 40 to national mean yd hhs ratio,-955,482,42,42,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,1147598D776EEF46A832552052DB6AA254895881,9A888E93B6C65702577923B878635F0367B25AF4,1,0,0,0,0,192,0,-1--1--1,,1|(-1003,453)|
+1,0,A6577D595D616C2E0D84F25CCA3DE4CF36B47796,9A888E93B6C65702577923B878635F0367B25AF4,1,0,0,0,0,192,0,-1--1--1,,1|(-989,530)|
+10,0,yd real shares dec,-1369,613,32,32,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,map rq dec,-1513,614,55,12,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,F4761092E967C79CDDF4F6EAA43E9334E8B9BAA7,2B682592E2B5B450A16A84D6A06FF8A60550CB0E,1,0,0,0,0,192,0,-1--1--1,,1|(-1439,551)|
+1,0,1079BE6CB80EF1ABA74931C316B79CA905626EB8,2B682592E2B5B450A16A84D6A06FF8A60550CB0E,1,0,0,0,0,192,0,-1--1--1,,1|(-1461,626)|
+10,0,num hhs rq delayed,-1531,549,49,23,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,7796B65CEDBC5E9BAFDDB5B8DDF7E42BE9780E85,2B682592E2B5B450A16A84D6A06FF8A60550CB0E,1,0,0,0,0,192,0,-1--1--1,,1|(-1462,593)|
 \\\---/// Sketch information - do not modify anything except names
 V301  Do not put anything below this section - it will be ignored
 *19. Carbon Costs
@@ -42834,6 +43252,10 @@ add shortfall imports to the equation of av energy use...
 1,0,49C8A5134D5782FD5226DAE9E75A8E64E8BAF934,F81D16E0771F27A43349A9D5182DD7EC9D40DCCE,1,0,0,0,0,192,0,-1--1--1,,1|(-721,-1083)|
 10,0,cumulative change fossil fuel use per unit output,932,88,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,148F6D09DC376705E3598AD8D5CA40CC5AFAB4A8,DDE455E8BEFD81FD6EA26169D52D1A87491BA0EB,1,0,0,0,0,192,0,-1--1--1,,1|(856,5)|
+10,0,emissions intensity electricity,117,-805,75,25,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,E5FEFE828D444B63E226F735CD8F56E0475B905C,06EF3B2594E7C5C650275B7631BBA3E547115033,1,0,0,0,0,192,0,-1--1--1,,1|(115,-870)|
+10,0,electricity per output,113,-657,66,24,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,125713FE21897291BC61EE3DB51694520EB374D6,06EF3B2594E7C5C650275B7631BBA3E547115033,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 \\\---/// Sketch information - do not modify anything except names
 V301  Do not put anything below this section - it will be ignored
 *20. Electricity
@@ -44509,10 +44931,8 @@ Hydro replacement
 10,0,y real delayed unconstrained,2521,-3231,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,BC0F6D9F0912FF2E9ECF09F7C5948CC228864FDB,98C1EC10661F9428A58AA2A968044056912AEECC,1,0,0,0,0,192,0,-1--1--1,,1|(2342,-3274)|
 1,0,89AD8593A00E3548365F852D334F5AA6D2A8A2BF,98C1EC10661F9428A58AA2A968044056912AEECC,1,0,0,0,0,192,0,-1--1--1,,1|(2561,-3314)|
-10,0,end use C nrg,3194,-3575,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,568D2B241A24D10F325DD1D6D8FC087F2CBD0C1C,2EB6B9225A050D8DDB29D7FDCE629E454E03C28B,1,0,0,0,0,64,0,-1--1--1,,1|(3096,-3575)|
-10,0,end use Z nrg,3166,-3667,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,7E73F3CF2A0AF38B9091D98DCF4EE6975CE400E5,2EB6B9225A050D8DDB29D7FDCE629E454E03C28B,1,0,0,0,0,64,0,-1--1--1,,1|(3075,-3673)|
+1,0,09E116680180B6B10C5487F4D0DE3C55EFA8FC7D,2EB6B9225A050D8DDB29D7FDCE629E454E03C28B,1,0,0,0,0,64,0,-1--1--1,,1|(3096,-3575)|
+1,0,C203738B179CE8B531FD5E1490105D7C00E416FB,2EB6B9225A050D8DDB29D7FDCE629E454E03C28B,1,0,0,0,0,64,0,-1--1--1,,1|(3075,-3673)|
 10,0,Year 1,2790,-3705,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,B8E2B911069BFC565748894FEA7E640738E4CE57,7231531279A59C3BA1A0C962EDF755D5CE2AC182,1,0,0,0,0,64,0,-1--1--1,,1|(2737,-3657)|
 10,0,g GDP smoothed,1798,-3144,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
@@ -44625,6 +45045,39 @@ Storage trends
 1,0,030727D956F5F4C72B74C9E250BD52036AF09756,F70D669B6405749A2CBCBACD76075FD8DF6A76F9,1,0,0,0,0,192,0,-1--1--1,,1|(593,1778)|
 10,0,post debt repayment profits delay i effective,4693,2430,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,53D751FEF0F2F6ED528C682F7BC2296ABDD86EDD,081D2613AF813234E47FE35D50413B251498666C,1,0,0,0,0,192,0,-1--1--1,,1|(4767,2272)|
+10,0,capacity almost constructed investment fossils,4108,-1056,71,36,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,61965E6D759CF29EF94AE733068596D1EAE36565,1C1B793C17FE7A1063AE6050295311B6CFDC46AD,1,0,0,0,0,192,0,-1--1--1,,1|(3816,-931)|
+10,0,Total annual new installation of electricity generation capacity,4302,-1018,64,36,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,61965E6D759CF29EF94AE733068596D1EAE36565,27DFF482B94A5E838D46F26ACAAFF9F7C5271318,1,0,0,0,0,192,0,-1--1--1,,1|(4159,-949)|
+1,0,1C1B793C17FE7A1063AE6050295311B6CFDC46AD,27DFF482B94A5E838D46F26ACAAFF9F7C5271318,1,0,0,0,0,192,0,-1--1--1,,1|(4203,-1066)|
+10,0,production capacity fossils,3539,-557,59,25,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,0CF6B63DEECCF171950613560D34AC9B86A1582F,FC4431ADDDC1AF96A1ACF3EBD897E70902397231,1,0,0,0,0,192,0,-1--1--1,,1|(3432,-587)|
+10,0,total installed production capacity,3640,-503,53,36,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,0CF6B63DEECCF171950613560D34AC9B86A1582F,4BD16C044DB3929C570B663821B0756351305224,1,0,0,0,0,192,0,-1--1--1,,1|(3410,-569)|
+1,0,FC4431ADDDC1AF96A1ACF3EBD897E70902397231,4BD16C044DB3929C570B663821B0756351305224,1,0,0,0,0,192,0,-1--1--1,,1|(3643,-542)|
+10,0,final energy consumption of electricity,3403,-3642,62,36,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,C203738B179CE8B531FD5E1490105D7C00E416FB,C5935AD1AE64BADB9BBB45770A6502ED1C54B7EC,1,0,0,0,0,192,0,-1--1--1,,1|(3252,-3680)|
+1,0,09E116680180B6B10C5487F4D0DE3C55EFA8FC7D,C5935AD1AE64BADB9BBB45770A6502ED1C54B7EC,1,0,0,0,0,192,0,-1--1--1,,1|(3236,-3625)|
+10,0,final energy consumption of gas,3405,-3562,62,36,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,C203738B179CE8B531FD5E1490105D7C00E416FB,02B4E06B34F3BD9805CBDCB6981118E891125C91,1,0,0,0,0,192,0,-1--1--1,,1|(3318,-3554)|
+1,0,09E116680180B6B10C5487F4D0DE3C55EFA8FC7D,02B4E06B34F3BD9805CBDCB6981118E891125C91,1,0,0,0,0,192,0,-1--1--1,,1|(3313,-3544)|
+10,0,final energy consumption other,3600,-3657,52,36,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,final energy consumption solid bio,3403,-3732,67,25,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,end use C nrg,3194,-3575,49,24,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,09E116680180B6B10C5487F4D0DE3C55EFA8FC7D,8144F973310C8F410EF95DF6909850952C3201C2,1,0,0,0,0,64,0,-1--1--1,,1|(3249,-3674)|
+10,0,end use Z nrg,3166,-3667,48,24,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,C203738B179CE8B531FD5E1490105D7C00E416FB,8144F973310C8F410EF95DF6909850952C3201C2,1,0,0,0,0,64,0,-1--1--1,,1|(3225,-3728)|
+10,0,final energy consumption coal,3405,-3808,70,25,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,C203738B179CE8B531FD5E1490105D7C00E416FB,07E5A165EE15E5F8F70CFF9D2C991DBDA1A75401,1,0,0,0,0,192,0,-1--1--1,,1|(3235,-3777)|
+1,0,09E116680180B6B10C5487F4D0DE3C55EFA8FC7D,07E5A165EE15E5F8F70CFF9D2C991DBDA1A75401,1,0,0,0,0,192,0,-1--1--1,,1|(3266,-3741)|
+10,0,final energy consumption solid,3573,-3781,72,25,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,07E5A165EE15E5F8F70CFF9D2C991DBDA1A75401,BAF83350495ED5F05D2DF63D27E0B7C0C5588294,1,0,0,0,0,192,0,-1--1--1,,1|(3534,-3811)|
+1,0,8144F973310C8F410EF95DF6909850952C3201C2,BAF83350495ED5F05D2DF63D27E0B7C0C5588294,1,0,0,0,0,192,0,-1--1--1,,1|(3526,-3735)|
+1,0,C5935AD1AE64BADB9BBB45770A6502ED1C54B7EC,445B119105492EBF6081D47EB136EC6022645330,1,0,0,0,0,64,0,-1--1--1,,1|(3495,-3634)|
+1,0,02B4E06B34F3BD9805CBDCB6981118E891125C91,445B119105492EBF6081D47EB136EC6022645330,1,0,0,0,0,64,0,-1--1--1,,1|(3507,-3590)|
+1,0,BAF83350495ED5F05D2DF63D27E0B7C0C5588294,445B119105492EBF6081D47EB136EC6022645330,1,0,0,0,0,64,0,-1--1--1,,1|(3605,-3727)|
+10,0,total end use,3582,-3516,46,24,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,3F1BA54F137DED3362DBEDAF89620E0C6B64D5F6,445B119105492EBF6081D47EB136EC6022645330,1,0,0,0,0,64,0,-1--1--1,,1|(3615,-3578)|
 \\\---/// Sketch information - do not modify anything except names
 V301  Do not put anything below this section - it will be ignored
 *21. Carbon and energy footprints
@@ -45780,9 +46233,9 @@ $192-192-192,0,Calibri|12||0-0-0|0-0-0|0-0-255|-1--1--1|255-255-255|96,96,5,2
 1,0,F71F1FB93C372535E3D05AB0879061A6DDE74F5D,F0656658BEB3F0B74039B3EDC5295EF236329D81,1,0,0,0,0,192,0,-1--1--1,,1|(2515,1313)|
 10,0,Initial wellbeing indicators,2365,1221,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,F6E20B7E91D21A762CAB22FA925CA643250FF22E,F0656658BEB3F0B74039B3EDC5295EF236329D81,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
-10,0,Life satisfaction,2495,1465,35,35,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
-1,0,F0656658BEB3F0B74039B3EDC5295EF236329D81,4B4B96140DBD802A28C5C2E014F8EFE1A54D6B4F,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
-1,0,3809CDF0FE971BD178320DBE0E7938E1BDA26456,4B4B96140DBD802A28C5C2E014F8EFE1A54D6B4F,1,0,0,0,0,192,0,-1--1--1,,1|(2601,1594)|
+10,0,Life satisfaction,2374,1537,35,35,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,F0656658BEB3F0B74039B3EDC5295EF236329D81,8334D29F044D638CA6418757C2824C63ABB6E024,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,98360AC7CEB765F1FA6E86E606EB934E92CC2FC4,8334D29F044D638CA6418757C2824C63ABB6E024,1,0,0,0,0,192,0,-1--1--1,,1|(2413,1668)|
 10,0,Initial gini to palma ratio rq,986,1528,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
 1,0,608669ADC48CAB34D8C575D78FEBC42AAB7B0A84,70FB0248DF0379F2821F552D2215F5464CDF1BDE,1,0,0,0,0,192,0,-1--1--1,,1|(755,1501)|
 10,0,Effect of public expenditure on access,1257,1254,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
@@ -45817,11 +46270,11 @@ Wellbeing indicators
 1,0,B904FEFB9CAE0EF4680A994AA1EEAB7047905CA3,F0656658BEB3F0B74039B3EDC5295EF236329D81,1,0,0,0,0,192,0,-1--1--1,,1|(2451,1200)|
 10,0,Wellbeing indicators r,1565,1521,31,31,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
 1,0,EAFB5E42471BA8A8F27197A24292EDE02B5B5D9D,A6C09C2252FF9737FA25E477724C3FE786270CF2,1,0,0,0,0,192,0,-1--1--1,,1|(1501,1450)|
-10,0,num hhs rq delayed,2256,1570,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,55A6385FE7D7EB174B49F6977B43EB2040AD20AC,A6C09C2252FF9737FA25E477724C3FE786270CF2,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,0,num hhs rq delayed,2036,1547,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,FBB2A3E52E2691F8EE75CADA24019947C49865DB,A6C09C2252FF9737FA25E477724C3FE786270CF2,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
 10,0,Life satisfaction r,2276,1465,36,36,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
 1,0,F0656658BEB3F0B74039B3EDC5295EF236329D81,26BD40E963AB7930C19CD95CCD0FBE713F945BCF,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
-1,0,55A6385FE7D7EB174B49F6977B43EB2040AD20AC,26BD40E963AB7930C19CD95CCD0FBE713F945BCF,1,0,0,0,0,192,0,-1--1--1,,1|(2258,1529)|
+1,0,FBB2A3E52E2691F8EE75CADA24019947C49865DB,26BD40E963AB7930C19CD95CCD0FBE713F945BCF,1,0,0,0,0,192,0,-1--1--1,,1|(2113,1503)|
 10,0,av daily work hours rq,1740,522,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
 10,0,init av daily work hours rq,1630,479,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
 10,0,increase wrt init work hours rq,1696,596,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
@@ -45837,8 +46290,8 @@ Wellbeing indicators
 1,0,94C0C3861678C1A9DDA427E7DC89E4E3F94685F8,7DD14732DCD61BE6A7506CEB3C13ACE8F11EFFD1,1,0,0,0,0,64,0,-1--1--1,,1|(1756,410)|
 10,0,init av daily work hours gs,1596,315,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
 1,0,93F9F811DC3645A8092CF434EA654B424D21AF49,1B9A7543C6CDA005D48B08F23C8C1506BD0C2C9E,1,0,0,0,0,64,0,-1--1--1,,1|(1610,418)|
-10,0,num hhs delayed shares rq,2811,1617,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-1,0,3809CDF0FE971BD178320DBE0E7938E1BDA26456,BA95D59A7EA8CFF411A24A6B90673A0E78E94C9A,1,0,0,0,0,64,0,-1--1--1,,1|(2160,1763)|
+10,0,num hhs delayed shares rq,2501,1787,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,98360AC7CEB765F1FA6E86E606EB934E92CC2FC4,BA95D59A7EA8CFF411A24A6B90673A0E78E94C9A,1,0,0,0,0,64,0,-1--1--1,,1|(1993,1806)|
 1,0,EAFB5E42471BA8A8F27197A24292EDE02B5B5D9D,BA95D59A7EA8CFF411A24A6B90673A0E78E94C9A,1,0,0,0,0,64,0,-1--1--1,,1|(1495,1531)|
 10,0,relationship rq,1410,930,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
 10,0,trust rq,1008,1218,75,30,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
@@ -45952,14 +46405,62 @@ Wellbeing indicators
 1,0,C4A0F0FE2F65D718E22396379DB640F01F8ECC72,6F597B7C317F30EE43158DB1B127318D2F5055D9,1,0,0,0,0,192,0,-1--1--1,,1|(1652,1031)|
 10,0,wellbeing indeces normalized r,1942,1608,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
 1,0,A6C09C2252FF9737FA25E477724C3FE786270CF2,DCF982C16E70CE3A4D7D9412B3E6D108E859506C,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-10,0,Life Satisfaction normalized r,2410,1652,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
-1,0,26BD40E963AB7930C19CD95CCD0FBE713F945BCF,7C59B57AAF48EADEB4D3A575136C6C367C412D52,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
-10,0,initial life satisfaction,2385,1522,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
-1,0,4B4B96140DBD802A28C5C2E014F8EFE1A54D6B4F,0B31890E71E4AC515BF87336A462670D0655628A,0,0,0,0,0,128,1,-1--1--1,,1|(0,0)|
-1,0,0B31890E71E4AC515BF87336A462670D0655628A,7C59B57AAF48EADEB4D3A575136C6C367C412D52,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,0,Life Satisfaction normalized r,2142,1709,43,43,6,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,0,26BD40E963AB7930C19CD95CCD0FBE713F945BCF,2BCF50E354CDCA0BAFED290F52C1DAEC6CAB474D,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,0,initial life satisfaction,2315,1663,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,0,8334D29F044D638CA6418757C2824C63ABB6E024,49954982D6B8504D113ACC4CEC1280537951EE07,0,0,0,0,0,128,1,-1--1--1,,1|(0,0)|
+1,0,49954982D6B8504D113ACC4CEC1280537951EE07,2BCF50E354CDCA0BAFED290F52C1DAEC6CAB474D,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
 10,0,initial wellbeing indicator aggr,1746,1644,75,30,8,3,0,0,0,0,0,0,0,0,0,0,0,0
 1,0,BA95D59A7EA8CFF411A24A6B90673A0E78E94C9A,8B11D250AE6920DA0860DD7340078F47FBA34660,0,0,0,0,0,128,1,-1--1--1,,1|(0,0)|
 1,0,8B11D250AE6920DA0860DD7340078F47FBA34660,DCF982C16E70CE3A4D7D9412B3E6D108E859506C,0,0,0,0,0,128,0,-1--1--1,,1|(0,0)|
+10,0,LS shares rq,2855,1449,66,12,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,LS shares rq cat,3024,1417,66,24,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,254D53BB6033E7FA6E05C755EE7233273502CB2B,2A794B0D0F8EDDB3553D530E22D522FFAE09954C,1,0,0,0,0,192,0,-1--1--1,,1|(2947,1415)|
+10,0,LS pre gini sum j,3228,1402,72,24,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,Life satisfaction gini,3399,1355,41,41,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,BB1CADE61AC7C5A54F9A2860760BE0DC39ADC0ED,ECF0A1FAC7E7356D4B478DF0925B3BDF26D42CD7,1,0,0,0,0,192,0,-1--1--1,,1|(3306,1349)|
+1,0,2A794B0D0F8EDDB3553D530E22D522FFAE09954C,BB1CADE61AC7C5A54F9A2860760BE0DC39ADC0ED,1,0,0,0,0,192,0,-1--1--1,,1|(3146,1384)|
+1,0,F0656658BEB3F0B74039B3EDC5295EF236329D81,254D53BB6033E7FA6E05C755EE7233273502CB2B,1,0,0,0,0,192,0,-1--1--1,,1|(2659,1482)|
+10,0,num hhs delayed shares rq cat,3228,1450,81,24,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,8F4123913B432D9FC6F9A4C119917F33DD96E7A2,BB1CADE61AC7C5A54F9A2860760BE0DC39ADC0ED,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,0,Life satisfaction dec,2659,1528,34,34,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,Life satisfaction top 10,2658,1609,34,34,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,Life satisfaction middle 40,2659,1689,34,34,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,Life satisfaction bottom 50,2659,1768,34,34,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,0,F0656658BEB3F0B74039B3EDC5295EF236329D81,513806E772A455E51C8F7DD9014579587B71D3E1,1,0,0,0,0,64,0,-1--1--1,,1|(2506,1493)|
+10,0,map rq dec,2795,1528,51,13,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,81AB951F41485FE8254120171F5BD0A45253DE9E,513806E772A455E51C8F7DD9014579587B71D3E1,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,0,98360AC7CEB765F1FA6E86E606EB934E92CC2FC4,513806E772A455E51C8F7DD9014579587B71D3E1,1,0,0,0,0,64,0,-1--1--1,,1|(2519,1635)|
+10,0,bottom 50 rq,2795,1768,51,13,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,32B85A674B4565BAC024D49A6C6F00193DDEE637,F6A91F26082DCA901F3ACE7CA069A302678F5299,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,0,F0656658BEB3F0B74039B3EDC5295EF236329D81,F6A91F26082DCA901F3ACE7CA069A302678F5299,1,0,0,0,0,64,0,-1--1--1,,1|(2493,1586)|
+1,0,98360AC7CEB765F1FA6E86E606EB934E92CC2FC4,F6A91F26082DCA901F3ACE7CA069A302678F5299,1,0,0,0,0,64,0,-1--1--1,,1|(2554,1750)|
+1,0,F0656658BEB3F0B74039B3EDC5295EF236329D81,6A748B172548B5118475B3E93D7116FB0CEE6F3A,1,0,0,0,0,64,0,-1--1--1,,1|(2497,1552)|
+10,0,middle 40 rq,2795,1689,51,13,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,D5E7940C14FB8E0F8FBC7B8869B388524582DD09,6A748B172548B5118475B3E93D7116FB0CEE6F3A,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+1,0,98360AC7CEB765F1FA6E86E606EB934E92CC2FC4,6A748B172548B5118475B3E93D7116FB0CEE6F3A,1,0,0,0,0,64,0,-1--1--1,,1|(2564,1711)|
+1,0,F0656658BEB3F0B74039B3EDC5295EF236329D81,42EBB47249F0314BC8A9CF0BC37E858D934F4544,1,0,0,0,0,64,0,-1--1--1,,1|(2501,1522)|
+1,0,98360AC7CEB765F1FA6E86E606EB934E92CC2FC4,42EBB47249F0314BC8A9CF0BC37E858D934F4544,1,0,0,0,0,64,0,-1--1--1,,1|(2537,1692)|
+10,0,top 10 rq,2795,1609,51,13,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,020FA8D8263C04E347EF7F1453EF40BEF835104C,42EBB47249F0314BC8A9CF0BC37E858D934F4544,0,0,0,0,0,64,0,-1--1--1,,1|(0,0)|
+10,0,Wellbeing indicators dec,2935,1528,34,34,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,Wellbeing indicators top 10,2935,1609,34,34,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,Wellbeing indicators middle 40,2935,1689,34,34,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,Wellbeing indicators bottom 50,2935,1768,34,34,6,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,0,Wellbeing indicators rq,3183,1649,55,25,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+10,0,num hhs delayed shares rq,3176,1697,72,25,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+1,0,823CDC167A26748439003A694B5A0EF7FEACAD1B,56BBD9D73A38345E4B4D88E681B7FCA206E2957A,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,823CDC167A26748439003A694B5A0EF7FEACAD1B,88A44F8D687D5E6FE0EB4DBBBC11D60363AF22FE,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,823CDC167A26748439003A694B5A0EF7FEACAD1B,803DF54F7A6548F3D13547372B2A654BF1F0FA15,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,823CDC167A26748439003A694B5A0EF7FEACAD1B,6D6542BD224BAD6068313A40FBB10AB17FDFCC25,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,80571A0EA2080F21761B4CB720B1DAC1B0F578AD,56BBD9D73A38345E4B4D88E681B7FCA206E2957A,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,80571A0EA2080F21761B4CB720B1DAC1B0F578AD,88A44F8D687D5E6FE0EB4DBBBC11D60363AF22FE,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,80571A0EA2080F21761B4CB720B1DAC1B0F578AD,803DF54F7A6548F3D13547372B2A654BF1F0FA15,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,80571A0EA2080F21761B4CB720B1DAC1B0F578AD,6D6542BD224BAD6068313A40FBB10AB17FDFCC25,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,81AB951F41485FE8254120171F5BD0A45253DE9E,56BBD9D73A38345E4B4D88E681B7FCA206E2957A,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,020FA8D8263C04E347EF7F1453EF40BEF835104C,88A44F8D687D5E6FE0EB4DBBBC11D60363AF22FE,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,D5E7940C14FB8E0F8FBC7B8869B388524582DD09,803DF54F7A6548F3D13547372B2A654BF1F0FA15,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
+1,0,32B85A674B4565BAC024D49A6C6F00193DDEE637,6D6542BD224BAD6068313A40FBB10AB17FDFCC25,0,0,0,0,0,192,0,-1--1--1,,1|(0,0)|
 \\\---/// Sketch information - do not modify anything except names
 V301  Do not put anything below this section - it will be ignored
 *23. Gender and regions
@@ -46239,86 +46740,84 @@ $192-192-192,0,Calibri|12||0-0-0|0-0-0|0-0-255|-1--1--1|255-255-255|96,96,5,2
 V301  Do not put anything below this section - it will be ignored
 *Indicators Simulator
 $192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|255-255-255|96,96,5,0
-10,0,per capita GDP real,131,123,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,yd hh gini,407,126,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-12,0,0,1000,473,122,17,3,135,0,0,-1,0,0,0,-1,-1,0,0,0,0
+10,0,per capita GDP real,-39,137,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,yd hh gini,340,137,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+12,0,0,1086,38,85,16,3,135,0,4,-1,0,0,0,0-0-0,192-192-192,|||0-0-0,-1,-1,0,0,0,0
 Kaya identity
-10,0,Pop decomp,1057,526,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,GDPpc real decomp,1064,560,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,NRG intensity decomp,948,562,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,GHG decomp,932,526,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,Emissions intensity decomp,1008,597,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-12,0,0,167,58,81,31,3,7,0,0,-1,0,0,0,-1,-1,0,0,0,0
-Macro Indicators
-10,0,debt gdp,127,283,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-12,0,0,1011,47,134,26,3,7,0,0,-1,0,0,0,-1,-1,0,0,0,0
+10,0,Pop decomp,1087,371,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,GDPpc real decomp,1087,608,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,NRG intensity decomp,1087,254,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,GHG decomp,1087,135,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,Emissions intensity decomp,1087,490,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+12,0,0,-37,37,266,15,3,7,0,4,-1,0,0,0,0-0-0,192-192-192,|||0-0-0,-1,-1,0,0,0,0
+Macro Indicators / Final demand real
+10,0,debt gdp,142,257,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+12,0,0,617,699,542,16,3,7,0,4,-1,0,0,0,0-0-0,192-192-192,|||0-0-0,-1,-1,0,0,0,0
 Energy Transition
-10,0,lab prod,132,213,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,gini wage,411,176,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-12,0,0,419,54,67,29,3,7,0,0,-1,0,0,0,-1,-1,0,0,0,0
+10,0,lab prod,-218,375,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,gini wage,340,257,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+12,0,0,430,38,175,16,3,7,0,4,-1,0,0,0,0-0-0,192-192-192,|||0-0-0,-1,-1,0,0,0,0
 Inequalities
-10,0,gender labour income gap ratio,410,231,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,gender gap employm,413,263,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,GDP real,115,316,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,VA macro industry,104,350,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,renewable energy share,1051,96,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,emissions macrosector,942,132,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,emissions C,931,212,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,RES generation share electricity,933,175,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,yd share top 10,408,296,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,yd share bottom 50,407,328,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,yd share middle 40,410,357,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-12,0,0,670,59,125,35,3,7,0,0,-1,0,0,0,-1,-1,0,0,0,0
+10,0,gender labour income gap ratio,522,375,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,gender gap employm,340,375,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,GDP real,142,137,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,VA macro industry,-39,375,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,renewable energy share,344,799,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,emissions macrosector,710,799,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,emissions C,894,799,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,RES generation share electricity,527,799,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,yd share top 10,340,493,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,yd share bottom 50,340,613,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,yd share middle 40,522,493,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+12,0,0,811,38,175,16,3,7,0,4,-1,0,0,0,0-0-0,192-192-192,|||0-0-0,-1,-1,0,0,0,0
 Regional disaggregation
-10,0,Palma ratio region,741,168,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,relative poverty rate,408,397,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,C emissions per capita bottom 50,1261,404,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,C emissions per capita middle 40,1258,446,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,C emissions per capita top 10,1262,493,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,C emissions share bottom 50,932,291,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,C emissions share top 10,931,388,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,C emissions share middle 40,937,344,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,C emissions per capita r,607,179,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,gov c real health edu per capita,664,616,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-12,0,0,672,414,94,14,3,135,0,0,-1,0,0,0,-1,-1,0,0,0,0
+10,0,Palma ratio region,901,257,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,relative poverty rate,522,613,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,C emissions per capita bottom 50,894,1038,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,C emissions per capita middle 40,710,1038,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,C emissions per capita top 10,527,1038,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,C emissions share bottom 50,160,1038,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,C emissions share top 10,894,919,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,C emissions share middle 40,1075,919,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,C emissions per capita r,721,257,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,gov c real health edu per capita,-218,1038,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+12,0,0,-128,823,175,16,3,135,0,4,-1,0,0,0,0-0-0,192-192-192,|||0-0-0,-1,-1,0,0,0,0
 WELLBEING
-10,0,GINI yd,404,150,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,e,109,427,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,average energy spending share,1059,171,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,energy poverty rate,1060,130,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,CPI decile,113,496,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,delta empl gender r,603,275,75,30,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,empl tot r,618,314,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,wellbeing indeces normalized r,607,230,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,Wellbeing indicators,674,448,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,Life satisfaction,669,512,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,Life Satisfaction normalized r,745,225,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,c hhs real pp rq,729,124,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,exports real total,143,716,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,GFCF real total,136,751,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,hhs consumption total real,137,785,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,government consumption real total,131,831,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-12,0,0,134,661,63,12,3,135,0,0,-1,0,0,0,-1,-1,0,0,0,0
-Final Demand Real
-10,0,emissions Z,941,242,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-12,0,0,420,671,78,22,3,7,0,0,-1,0,0,0,-1,-1,0,0,0,0
+10,0,GINI yd,522,137,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,e,-218,493,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,average energy spending share,710,919,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,energy poverty rate,527,919,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,CPI decile,142,493,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,delta empl gender r,901,375,85,50,3,130,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,empl tot r,721,613,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,wellbeing indeces normalized r,721,375,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,Wellbeing indicators,-218,919,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,Life satisfaction,-39,919,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,Life Satisfaction normalized r,721,493,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,c hhs real pp rq,901,137,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,exports real total,142,613,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,GFCF real total,-39,613,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,hhs consumption total real,-218,731,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,government consumption real total,-39,731,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,emissions Z,1075,799,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+12,0,0,-128,1112,156,14,3,7,0,4,-1,0,0,0,0-0-0,192-192-192,|||0-0-0,-1,-1,0,0,0,0
 GDP - Inequality - Emissions Trilemma
-10,0,trilemma X,402,730,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,trilemma y,395,807,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,labour share,402,199,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,total GVA to output,109,538,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,national consumption based emissions,1265,348,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,energy mix,1078,258,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,energy mix end use,1080,219,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,c hhs shares pp r p real,752,283,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,GDP growth rate,133,153,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,unemployment rate,129,181,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,deficit to GDP,131,251,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,unemployment rate gs,103,390,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,inflation rate,113,464,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,total emissions Mt,946,93,75,30,8,2,0,2,-1,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
-10,0,wellbeing indeces normalized r,675,567,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
-10,0,mean yd r real per capita,613,126,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+10,0,trilemma X,-226,1168,75,30,8,2,0,2,-1,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,trilemma y,-21,1163,75,30,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|||128-128-128,0,0,0,0,0,0
+10,0,labour share,522,257,85,50,3,2,0,2,3,1,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,total GVA to output,-218,613,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,national consumption based emissions,344,1038,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,energy mix,160,919,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,energy mix end use,344,919,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,c hhs shares pp r p real,901,493,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,GDP growth rate,-218,137,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,unemployment rate,-218,257,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,deficit to GDP,-39,257,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,unemployment rate gs,142,375,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,inflation rate,-39,493,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,total emissions Mt,160,799,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,wellbeing indeces normalized r,-39,1038,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
+10,0,mean yd r real per capita,721,137,85,50,3,2,0,2,3,0,0,0,-1--1--1,-1--1--1,|||128-128-128,0,0,0,0,0,0
 ///---\\\
 :L<%^E!@
 22:Days,Day
@@ -46337,10 +46836,274 @@ GDP - Inequality - Emissions Trilemma
 22:Person,People
 22:Weeks,Week
 22:Weeks,Week
-30:?final_gender=data_sources\final_gender.xlsx
-30:?main=data_sources\Excel_new_origin.xlsx
-30:?wb=data_sources\Wellbeing_data.xlsx
-10:data_sources\skillsupply_a_powell.out,data_sources\skillsupply_b_powell.out,data_sources\male_share_powell_modelsecs.out,data_sources\skilldemand_powell_modelsecs.out,data_sources\investment_feb26.out,data_sources\calib_lfpr_2026_noU2.out,data_sources\MarkUp2ndCalibrationLimits.out,data_sources\wage_high.out,data_sources\mar28_innov_newbound2_newboundsens_sens.out,data_sources\calib_lfpr_shocks_noU2noLFPR_recalib.out
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+22:Days,Day
+22:Days,Day
+22:Dmnl,Dimensionless,percentage
+22:Dmnl,Dimensionless,percentage
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro constant,percentage*Euro constant,Euro constant*percentage,Good,Goods
+22:Euro*People,Euro
+22:Euro*People,Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Euro,percentage*Euro,Euro*percentage,Euro*percentage,Euro*People,People*Euro,Euro*kton,kton*Euro,Euro*Good,Euro*Goods,Euro/People,Euro/Good,Euro/Goods,Euro*People,Euro*Euro
+22:Hours,Hour
+22:Hours,Hour
+22:Person,People
+22:Person,People
+22:Weeks,Week
+22:Weeks,Week
+30:?final_gender=final_gender.xlsx
+30:?main=Excel_new_origin.xlsx
+30:?wb=Wellbeing_data.xlsx
+30:?final_gender=final_gender.xlsx
+30:?main=Excel_new_origin.xlsx
+30:?wb=Wellbeing_data.xlsx
+30:?final_gender=final_gender.xlsx
+30:?main=Excel_new_origin.xlsx
+30:?wb=Wellbeing_data.xlsx
+30:?final_gender=final_gender.xlsx
+30:?main=Excel_new_origin.xlsx
+30:?wb=Wellbeing_data.xlsx
+30:?final_gender=final_gender.xlsx
+30:?main=Excel_new_origin.xlsx
+30:?wb=Wellbeing_data.xlsx
+30:?final_gender=final_gender.xlsx
+30:?main=Excel_new_origin.xlsx
+30:?wb=Wellbeing_data.xlsx
+30:?final_gender=final_gender.xlsx
+30:?main=Excel_new_origin.xlsx
+30:?wb=Wellbeing_data.xlsx
+30:?final_gender=final_gender.xlsx
+30:?main=Excel_new_origin.xlsx
+30:?wb=Wellbeing_data.xlsx
+10:calibration_files\skillsupply_a_powell.out,calibration_files\skillsupply_b_powell.out,calibration_files\male_share_powell_modelsecs.out,calibration_files\skilldemand_powell_modelsecs.out,calibration_files\investment_feb26.out,calibration_files\calib_lfpr_2026_noU2.out,calibration_files\MarkUp2ndCalibrationLimits.out,calibration_files\wage_high.out,calibration_files\mar28_innov_newbound2_newboundsens_sens.out,calibration_files\calib_lfpr_shocks_noU2noLFPR_recalib.out
+11:calibration_settings_lfpr_2026.voc
+18:seed_sens_small.vsc
+20:WISER_list.lst
 15:0,0,0,0,0,0
 27:8,
 34:0,
@@ -46368,7 +47131,7 @@ GDP - Inequality - Emissions Trilemma
 90:0
 87:0
 75:
-43:C:\Users\dacan\OneDrive - University of Pisa\PISA\MODEL\Eurogreen\initialrun.xlsx
+43:C:\Users\dacan\OneDrive - University of Pisa\PISA\MODEL\Eurogreen\net_zero_redistribution.xlsx
 103:8,8,8,3,8
 105:0,0,0,0,0,0,0,0,0,0
 104:Courier|12||0-0-0|0-0-0|-1--1--1|0-0-255|192-192-192|-1--1--1
