@@ -32,7 +32,13 @@ This repository contains version **1.0** of the model, the one used to produce t
 
 ## How to cite
 
-If you use this model, please cite the repository using the "Cite this repository" button (see `CITATION.cff`) and the paper above.
+If you use this model, please cite the paper above and the archived version of the model:
+
+> Cano Ortiz, D., D'Alessandro, S., Heydenreich, T., & Morlin, G. S. (2026). *Eurogreen+ model* (Version 1.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.24407135
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24407135.svg)](https://doi.org/10.5281/zenodo.24407135)
+
+The "Cite this repository" button on this page provides the citation in other formats (see `CITATION.cff`).
 
 ## License
 
