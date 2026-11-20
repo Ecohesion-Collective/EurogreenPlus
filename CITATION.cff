@@ -22,6 +22,7 @@ version: "1.0"
 date-released: "2026-11-20"
 license: "CC-BY-NC-4.0"
 repository-code: "https://github.com/Ecohesion-Collective/EurogreenPlus"
+doi: "10.5281/zenodo.24407135"
 keywords:
   - ecological macroeconomics
   - stock-flow consistent modelling
