@@ -1,0 +1,48 @@
+cff-version: 1.2.0
+message: "If you use this model, please cite it using the metadata below."
+authors:
+- family-names: "Cano Ortiz"
+  given-names: "David"
+  orcid: "https://orcid.org/0000-0001-6552-4639"
+  affiliation: "University of Pisa"  
+- family-names: "D'Alessandro"
+  given-names: "Simone"
+  orcid: "https://orcid.org/0000-0002-9366-7220"
+  affiliation: "University of Pisa"
+- family-names: "Heydenreich"
+  given-names: "Till"
+  orcid: "https://orcid.org/0000-0002-9012-7579"
+  affiliation: "University of Pisa; Potsdam Institute for Climate Impact Research (PIK)"
+- family-names: "Morlin"
+  given-names: "Guilherme Spinato"
+  orcid: "https://orcid.org/0000-0002-5010-5420"
+  affiliation: "University of Pisa; Centro Internacional Celso Furtado de Políticas para o Desenvolvimento"
+title: "Eurogreen+ model"
+version: "1.0"
+date-released: "2026-11-20"
+repository-code: "https://github.com/Ecohesion-Collective/EurogreenPlus"
+keywords:
+  - ecological macroeconomics
+  - stock-flow consistent modelling
+  - system dynamics
+  - dynamic input–output
+  - heterogeneous households
+  - income inequality
+  - technical change
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Cano Ortiz"
+      given-names: "David"
+    - family-names: "D'Alessandro"
+      given-names: "Simone"
+    - family-names: "Heydenreich"
+      given-names: "Till"
+    - family-names: "Morlin"
+      given-names: "Guilherme Spinato"
+  title: "Eurogreen+: An integrated modelling framework for analysing socioeconomic and energy transitions"
+  journal: "Ecological Economics"
+  volume: 253
+  number: 109261
+  year: 2027
+  doi: "10.1016/j.ecolecon.2026.109261"
