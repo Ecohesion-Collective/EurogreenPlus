@@ -20,6 +20,7 @@ authors:
 title: "Eurogreen+ model"
 version: "1.0"
 date-released: "2026-11-20"
+license: "CC-BY-NC-4.0"
 repository-code: "https://github.com/Ecohesion-Collective/EurogreenPlus"
 keywords:
   - ecological macroeconomics
