@@ -34,6 +34,10 @@ This repository contains version **1.0** of the model, the one used to produce t
 
 If you use this model, please cite the repository using the "Cite this repository" button (see `CITATION.cff`) and the paper above.
 
+## License
+
+This work is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0). See the `LICENSE` file or https://creativecommons.org/licenses/by-nc/4.0/.
+
 ## Contact
 
 For questions, bug reports or suggestions, please open an issue in this repository.
